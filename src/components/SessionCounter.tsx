@@ -1,13 +1,13 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { LONG_BREAK_INTERVAL } from '../constants.js';
 
 interface Props {
   sessions: number;
+  longBreakEvery: number;
 }
 
-export default function SessionCounter({ sessions }: Props) {
-  const toNextLong = LONG_BREAK_INTERVAL - (sessions % LONG_BREAK_INTERVAL);
+export default function SessionCounter({ sessions, longBreakEvery }: Props) {
+  const toNextLong = longBreakEvery - (sessions % longBreakEvery);
   return (
     <Box marginTop={1}>
       <Text dimColor>Sessions completed: </Text>

@@ -3,20 +3,23 @@ import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
 import Dashboard from './Dashboard.js';
 import CommandPalette from './components/CommandPalette.js';
-import type { Command } from './types.js';
+import type { Command, Settings } from './types.js';
 
 interface Props {
+  settings: Settings;
   onStart: () => void;
+  onSettings: () => void;
 }
 
-export default function Menu({ onStart }: Props) {
+export default function Menu({ settings, onStart, onSettings }: Props) {
   const { exit } = useApp();
   const [value, setValue] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const COMMANDS: Command[] = [
-    { name: '/start', description: 'Start the Pomodoro timer', action: onStart },
-    { name: '/exit',  description: 'Exit the app',             action: exit    },
+    { name: '/start',    description: 'Start the Pomodoro timer',  action: onStart    },
+    { name: '/settings', description: 'Configure timer durations', action: onSettings },
+    { name: '/exit',     description: 'Exit the app',              action: exit       },
   ];
 
   const isSlashMode = value.startsWith('/');
@@ -47,7 +50,7 @@ export default function Menu({ onStart }: Props) {
 
   return (
     <Box flexDirection="column" paddingY={1} paddingX={2}>
-      <Dashboard settings={{ workMin: 25, shortBreakMin: 5, longBreakMin: 15, longBreakEvery: 4 }} />
+      <Dashboard settings={settings} />
 
       <Box>
         <Text color="green">❯ </Text>

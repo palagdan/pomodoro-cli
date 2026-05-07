@@ -6,15 +6,16 @@ import TimerCard from './components/TimerCard.js';
 import SessionCounter from './components/SessionCounter.js';
 import PhaseIndicators from './components/PhaseIndicators.js';
 import Controls from './components/Controls.js';
-import type { PhaseName } from './types.js';
+import type { Settings } from './types.js';
 
 interface Props {
+  settings: Settings;
   onExit?: () => void;
 }
 
-export default function App({ onExit }: Props) {
+export default function App({ settings, onExit }: Props) {
   const { exit } = useApp();
-  const { phase, timeLeft, running, sessions, toggleRunning, resetPhase, skipPhase, jumpTo } = useTimer();
+  const { phase, timeLeft, running, sessions, toggleRunning, resetPhase, skipPhase, jumpTo } = useTimer(settings);
 
   useInput((input, key) => {
     if (input === 'q' || (key.ctrl && input === 'c')) onExit ? onExit() : exit();
@@ -32,8 +33,8 @@ export default function App({ onExit }: Props) {
         <Text bold color={PHASES[phase].color as any}>🍅 Pomodoro Timer</Text>
       </Box>
 
-      <TimerCard phase={phase} timeLeft={timeLeft} running={running} />
-      <SessionCounter sessions={sessions} />
+      <TimerCard phase={phase} timeLeft={timeLeft} running={running} settings={settings} />
+      <SessionCounter sessions={sessions} longBreakEvery={settings.longBreakEvery} />
       <Controls running={running} hasBackButton={!!onExit} />
       <PhaseIndicators phase={phase} />
     </Box>

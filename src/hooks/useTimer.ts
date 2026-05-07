@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { PHASES, LONG_BREAK_INTERVAL } from '../constants.js';
-import type { PhaseName } from '../types.js';
+import { LONG_BREAK_INTERVAL } from '../constants.js';
+import type { PhaseName, Settings } from '../types.js';
+
+function buildDurations(settings: Settings): Record<PhaseName, number> {
+  return {
+    work:       settings.workMin       * 60,
+    shortBreak: settings.shortBreakMin * 60,
+    longBreak:  settings.longBreakMin  * 60,
+  };
+}
 
 export interface TimerState {
   phase: PhaseName;
@@ -16,9 +24,12 @@ export interface TimerActions {
   jumpTo: (phase: PhaseName) => void;
 }
 
-export function useTimer(): TimerState & TimerActions {
+export function useTimer(settings: Settings): TimerState & TimerActions {
+  const durations = buildDurations(settings);
+  const interval = settings.longBreakEvery;
+
   const [phase, setPhase] = useState<PhaseName>('work');
-  const [timeLeft, setTimeLeft] = useState(PHASES.work.duration);
+  const [timeLeft, setTimeLeft] = useState(durations.work);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
 
@@ -26,17 +37,17 @@ export function useTimer(): TimerState & TimerActions {
     if (fromPhase === 'work') {
       const next = currentSessions + 1;
       setSessions(next);
-      setPhase(next % LONG_BREAK_INTERVAL === 0 ? 'longBreak' : 'shortBreak');
+      setPhase(next % interval === 0 ? 'longBreak' : 'shortBreak');
     } else {
       setPhase('work');
     }
-  }, []);
+  }, [interval]);
 
-  // Reset timer when phase changes
+  // Reset timer when phase or settings change
   useEffect(() => {
-    setTimeLeft(PHASES[phase].duration);
+    setTimeLeft(durations[phase]);
     setRunning(false);
-  }, [phase]);
+  }, [phase, settings.workMin, settings.shortBreakMin, settings.longBreakMin]);
 
   // Countdown tick
   useEffect(() => {
@@ -60,7 +71,7 @@ export function useTimer(): TimerState & TimerActions {
     running,
     sessions,
     toggleRunning: () => setRunning(r => !r),
-    resetPhase:    () => { setTimeLeft(PHASES[phase].duration); setRunning(false); },
+    resetPhase:    () => { setTimeLeft(durations[phase]); setRunning(false); },
     skipPhase:     () => advancePhase(sessions, phase),
     jumpTo:        (p: PhaseName) => setPhase(p),
   };

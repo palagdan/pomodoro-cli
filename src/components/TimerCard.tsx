@@ -2,18 +2,26 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { PHASES } from '../constants.js';
 import { formatTime, progressBar } from '../utils.js';
-import type { PhaseName } from '../types.js';
+import type { PhaseName, Settings } from '../types.js';
 
 interface Props {
   phase: PhaseName;
   timeLeft: number;
   running: boolean;
+  settings: Settings;
 }
 
-export default function TimerCard({ phase, timeLeft, running }: Props) {
+function phaseDuration(phase: PhaseName, settings: Settings): number {
+  if (phase === 'work')       return settings.workMin * 60;
+  if (phase === 'shortBreak') return settings.shortBreakMin * 60;
+  return settings.longBreakMin * 60;
+}
+
+export default function TimerCard({ phase, timeLeft, running, settings }: Props) {
   const currentPhase = PHASES[phase];
-  const bar     = progressBar(timeLeft, currentPhase.duration);
-  const percent = Math.round((1 - timeLeft / currentPhase.duration) * 100);
+  const total   = phaseDuration(phase, settings);
+  const bar     = progressBar(timeLeft, total);
+  const percent = Math.round((1 - timeLeft / total) * 100);
 
   return (
     <Box
