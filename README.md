@@ -183,6 +183,8 @@ npm install
 npm start            # run the app
 npm run dev          # run with file watching
 npm run typecheck    # type-check
+npm test             # run the test suite once (Vitest)
+npm run test:watch   # run tests in watch mode
 npm run build        # compile to dist/
 ```
 

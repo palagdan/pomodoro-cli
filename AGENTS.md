@@ -15,11 +15,21 @@
 ```bash
 npm start              # start the app
 npm run dev            # start with file watching
-npx tsc --noEmit       # type-check — run this after every edit
+npx tsc --noEmit       # type-check
+npm test               # run the Vitest suite once
 npm run build          # compile to dist/ via tsconfig.build.json
 ```
 
-**Always run `npx tsc --noEmit` after changes and fix all errors before finishing.**
+**Run `npx tsc --noEmit` AND `npm test` after every change; both must pass before finishing.**
+
+## Testing
+
+- Tests live in `test/`, not `src/` (anything in `src/plugins/` is auto-loaded as a plugin).
+- Each test file gets its own temporary HOME via `test/helpers/setup.ts`, so tests never touch the real `~/.pomodoro-cli` (helpers in `test/helpers/home.ts`).
+- User-plugin tests must use a unique file name per test, because Node caches ES modules by URL.
+- Ink components are tested with `ink-testing-library` (await a short tick after `render`/`stdin.write`).
+- Timer tests use `act()` + fake timers (see `test/useTimer.test.tsx`).
+- When fixing a bug, add a regression test.
 
 ## Releasing
 
