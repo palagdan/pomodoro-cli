@@ -94,9 +94,7 @@ export default function Dashboard({ settings }: Props) {
             </Box>
 
             {/* Horizontal divider under title */}
-            <Box>
-                <Text color="red">{'─'.repeat(76)}</Text>
-            </Box>
+            <Box borderStyle="single" borderColor="red" borderTop borderBottom={false} borderLeft={false} borderRight={false} />
 
             {/* Two-column content */}
             <Box>
