@@ -24,7 +24,11 @@ The menu is driven by slash commands:
 | `/start`    | Start the timer       |
 | `/settings` | Edit timer durations  |
 | `/plugins`  | Manage plugins        |
+| `/history`  | Recent sessions grouped by day (from the built-in `session-log` plugin) |
+| `/stats`    | Last 7 days: bar chart, total, daily average, completed vs skipped, streak (`session-log`) |
 | `/exit`     | Quit                  |
+
+Plugins can add their own commands; those of active plugins appear in the menu between `/plugins` and `/exit`.
 
 Use `↑`/`↓` to move through the list, `Tab` to complete, `Enter` to run.
 
@@ -46,6 +50,7 @@ Built-in plugins:
 
 - `sound` - plays a macOS system sound when a phase starts (sounds are configurable).
 - `desktop-notify` - shows a desktop notification when a phase ends (macOS and Linux).
+- `session-log` - records finished focus sessions (and focus sessions skipped after they had started) and adds the `/history` and `/stats` commands. Records are appended to `~/.pomodoro-cli/history.jsonl` (configurable via `file`; enable `logBreaks` to log breaks too) as JSON Lines, one object per line: `at` (ISO timestamp), `phase`, `outcome` (`completed` or `skipped`), `focusedSeconds`, `durationSeconds`, `sessions`. Easy to analyse with `jq` or a script.
 
 Enable or disable plugins in `/plugins`.
 
@@ -96,7 +101,7 @@ The same folder is where plugins `npm install` their own dependencies.
 
 #### Hooks
 
-All hooks are optional, may be `async`, and receive a single context object. Every hook gets `{ settings, config }`; timer hooks additionally get `{ phase, sessions }`, where `sessions` is the number of completed focus sessions after the event.
+All hooks are optional, may be `async`, and receive a single context object. Every hook gets `{ settings, config }`; timer hooks additionally get `{ phase, sessions, durationSeconds, elapsedSeconds }`, where `sessions` is the number of completed focus sessions after the event, `durationSeconds` is the full length of the phase and `elapsedSeconds` is how much of it had run when the event fired (`0` for a fresh phase).
 
 | Hook               | Fires when                                                        | Context                         |
 |--------------------|-------------------------------------------------------------------|---------------------------------|
@@ -104,15 +109,49 @@ All hooks are optional, may be `async`, and receive a single context object. Eve
 | `onExit`           | the plugin becomes inactive (disabled) or the app exits           | `settings`, `config`            |
 | `onConfigChange`   | the config of an active plugin is saved                           | `settings`, `config`            |
 | `onSettingsChange` | timer settings change                                             | `settings`, `config`            |
-| `onPhaseChange`    | the current phase switches (timer is paused at the new phase)     | + `phase`, `sessions`           |
-| `onTimerStart`     | the countdown of a phase starts for the first time                | + `phase`, `sessions`           |
-| `onPause`          | the timer is paused                                               | + `phase`, `sessions`           |
-| `onResume`         | the timer is resumed                                              | + `phase`, `sessions`           |
-| `onReset`          | the current phase is reset                                        | + `phase`, `sessions`           |
-| `onPhaseEnd`       | a phase runs down to 0                                            | + `phase`, `sessions`           |
-| `onPhaseSkip`      | the user skips the phase                                          | + `phase`, `sessions`           |
+| `onPhaseChange`    | the current phase switches (timer is paused at the new phase)     | + timer context (see above)    |
+| `onTimerStart`     | the countdown of a phase starts for the first time                | + timer context (see above)    |
+| `onPause`          | the timer is paused                                               | + timer context (see above)    |
+| `onResume`         | the timer is resumed                                              | + timer context (see above)    |
+| `onReset`          | the current phase is reset                                        | + timer context (see above)    |
+| `onPhaseEnd`       | a phase runs down to 0                                            | + timer context (see above)    |
+| `onPhaseSkip`      | the user skips the phase                                          | + timer context (see above)    |
 
 `phase` is `'work'`, `'shortBreak'` or `'longBreak'`.
+
+#### Commands
+
+A plugin can add slash commands with `commands`. Each has a `name`, a `description` and a `run({ settings, config })` function that returns lines (sync or `async`). A line is a string or `{ text, color?, bold?, dim? }`. The lines are shown in a scrollable framed screen (`↑`/`↓`, `PageUp`/`PageDown` to scroll, `q` or `esc` to go back).
+
+```js
+// ~/.pomodoro-cli/plugins/hello.mjs
+export default {
+  name: 'hello',
+  apiVersion: 1,
+  commands: [
+    {
+      name: 'hello',
+      description: 'Say hello',
+      run({ settings, config }) {
+        return [
+          'Hello from a plugin!',
+          { text: `Focus length: ${Math.round(settings.workDuration / 60)} min`, color: 'green', bold: true },
+        ];
+      },
+    },
+  ],
+};
+```
+
+Rules:
+
+- `name` uses lowercase letters, digits and dashes, without the leading slash (`hello` becomes `/hello`).
+- `start`, `settings`, `plugins` and `exit` are reserved. On a name clash the first plugin wins and a warning is printed at startup. Invalid commands are ignored with a warning.
+- Only commands of *active* plugins appear in the menu.
+- `run` is limited to 10 seconds. A thrown error or a timeout is shown as a red line instead of crashing the app.
+- Return plain data only: plugins never import React or Ink.
+
+See `src/plugins/session-log.ts` for a full reference example (config, hooks and commands together).
 
 #### Lifecycle
 

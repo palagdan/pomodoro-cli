@@ -44,6 +44,7 @@ src/
   plugins/
     sound.ts              Built-in: system sound on phase start (macOS)
     desktop-notify.ts     Built-in: desktop notification on phase end
+    session-log.ts        Built-in: focus session history (history.jsonl) + /history and /stats commands
   ui/
     hooks/
       useTimer.ts         Timer state: phase, timeLeft, running, sessions + actions
@@ -55,6 +56,7 @@ src/
       Settings.tsx        Timer duration settings
       PluginList.tsx      Enable/disable plugins
       PluginConfig.tsx    Per-plugin config form
+      CommandOutput.tsx   Scrollable framed output of a plugin command
     components/
       TimerCard.tsx       Phase label + MM:SS clock + progress bar
       SessionCounter.tsx  Sessions count + next long break in N
@@ -121,8 +123,12 @@ Edit `src/ui/screens/Menu.tsx` — add an entry to the `COMMANDS` array:
 
 ### Plugin system
 Built-in plugins live in `src/plugins/`; user plugins in `~/.pomodoro-cli/plugins/*.js|mjs` (same name replaces a built-in). A plugin default-exports an object/class with `name` and `apiVersion: PLUGIN_API_VERSION`.
-- Hooks take a single context object (`{ settings, config }`, timer hooks add `{ phase, sessions }`), never positional args.
+- Hooks take a single context object (`{ settings, config }`, timer hooks add `{ phase, sessions, durationSeconds, elapsedSeconds }`), never positional args.
 - Add a new hook to `PluginHooks` in `src/types.ts`; `HookPayload` typing makes `host.emit(...)` type-checked.
 - `host.emit` is called from `TIMER_CALLBACKS` in `index.tsx`. Only active plugins (enabled and required config set) get hooks; `PluginHost` (`src/pluginHost.ts`) owns onInit/onExit/onConfigChange and `exit()` awaits onExit up to 3s.
 - Breaking change for third-party plugins (changing hook signatures, removing hooks): bump `PLUGIN_API_VERSION` and use a `feat!:` commit. Adding optional hooks or context fields is non-breaking.
 - Disabled names are stored in `~/.pomodoro-cli/plugins-disabled.json`; plugin config in `~/.pomodoro-cli/plugins/<name>.json`.
+- Plugin commands (`commands?: PluginCommand[]`) are collected by `host.commands()` (active plugins only) and run via `host.runCommand()` (10s limit, errors become a red line); output is rendered by `CommandOutput.tsx`. Plugins return `CommandLine[]` data and never import React/Ink.
+- Built-in command names are listed in `RESERVED_COMMANDS` in `src/pluginHost.ts`. Keep it in sync when adding a built-in slash command to `Menu.tsx`.
+- Everything in `src/plugins/` is auto-loaded as a built-in plugin, so helper modules must live elsewhere (e.g. `src/`).
+- Additions to `PhaseContext` (like `durationSeconds`/`elapsedSeconds`) and the optional `commands` field are non-breaking; the plugin API stays v1.
