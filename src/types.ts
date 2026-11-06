@@ -45,10 +45,35 @@ export interface PluginContext {
   config: ConfigValues;
 }
 
-/** Passed to timer hooks. `sessions` is the number of completed focus sessions after the event. */
-export interface PhaseContext extends PluginContext {
+/** Timer state at the moment of an event. */
+export interface PhaseInfo {
   phase: PhaseName;
+  /** Completed focus sessions after the event. */
   sessions: number;
+  /** Full length of the phase. */
+  durationSeconds: number;
+  /** How much of the phase had run when the event fired (0 for a fresh phase). */
+  elapsedSeconds: number;
+}
+
+/** Passed to timer hooks. */
+export interface PhaseContext extends PluginContext, PhaseInfo {}
+
+/** One line of command output: plain text, or text with simple styling. */
+export type CommandLine = string | {
+  text: string;
+  color?: string;
+  bold?: boolean;
+  dim?: boolean;
+};
+
+/** A slash command contributed by a plugin, e.g. `name: 'history'` → `/history`. */
+export interface PluginCommand {
+  /** Lowercase letters, digits and dashes, without the leading slash. */
+  name: string;
+  description: string;
+  /** Returns the lines shown on the command's screen. */
+  run(ctx: PluginContext): CommandLine[] | Promise<CommandLine[]>;
 }
 
 export interface PluginHooks {
@@ -84,6 +109,8 @@ export interface PomodoroPlugin extends PluginHooks {
   apiVersion: 1;
   description?: string;
   config?: readonly PluginConfigField[];
+  /** Slash commands shown in the menu while the plugin is active. */
+  commands?: readonly PluginCommand[];
 }
 
-export type Screen = 'menu' | 'timer' | 'settings' | 'plugins' | 'pluginConfig';
+export type Screen = 'menu' | 'timer' | 'settings' | 'plugins' | 'pluginConfig' | 'command';

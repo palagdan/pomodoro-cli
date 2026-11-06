@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { render } from 'ink';
 import Menu from './src/ui/screens/Menu.js';
+import CommandOutput from './src/ui/screens/CommandOutput.js';
 import App from './src/ui/screens/App.js';
 import Settings from './src/ui/screens/Settings.js';
 import PluginList from './src/ui/screens/PluginList.js';
@@ -10,14 +11,14 @@ import { usePlugins } from './src/ui/hooks/usePlugins.js';
 import { PluginHost, type PluginEntry } from './src/pluginHost.js';
 import { useTimer } from './src/ui/hooks/useTimer.js';
 import { loadSettings, saveSettings } from './src/storage.js';
-import type { Settings as SettingsType, PhaseName, Screen } from './src/types.js';
+import type { Settings as SettingsType, PhaseInfo, Screen } from './src/types.js';
 
 const initialSettings = loadSettings();
 const host = new PluginHost(initialSettings);
 await host.load();
 
 const phaseEvent = (event: 'onPhaseChange' | 'onTimerStart' | 'onPause' | 'onResume' | 'onReset' | 'onPhaseEnd' | 'onPhaseSkip') =>
-  (phase: PhaseName, sessions: number) => host.emit(event, { phase, sessions });
+  (info: PhaseInfo) => host.emit(event, info);
 
 // Stable across renders: forwards every timer event to the plugins
 const TIMER_CALLBACKS = {
@@ -34,7 +35,9 @@ function Root() {
   const [screen, setScreen]           = useState<Screen>('menu');
   const [settings, setSettings]       = useState<SettingsType>(initialSettings);
   const [activeName, setActiveName]   = useState<string | null>(null);
+  const [command, setCommand]     = useState<string | null>(null);
   const plugins = usePlugins(host);
+  const pluginCommands = host.commands(plugins);
   const activeEntry = plugins.find(e => e.plugin.name === activeName);
 
   // Timer lives here so sessions and the running countdown survive screen changes
@@ -62,6 +65,16 @@ function Root() {
       />
     );
   }
+  if (screen === 'command' && command) {
+    return (
+      <CommandOutput
+        key={command}
+        title={'/' + command}
+        load={() => host.runCommand(command)}
+        onExit={() => setScreen('menu')}
+      />
+    );
+  }
   if (screen === 'plugins') {
     return (
       <PluginList
@@ -79,6 +92,8 @@ function Root() {
       onStart={() => setScreen('timer')}
       onSettings={() => setScreen('settings')}
       onPlugins={() => setScreen('plugins')}
+      pluginCommands={pluginCommands}
+      onPluginCommand={name => { setCommand(name); setScreen('command'); }}
     />
   );
 }

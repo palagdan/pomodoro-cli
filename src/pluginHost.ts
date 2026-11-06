@@ -2,7 +2,9 @@ import {
   loadPlugins, loadEnabledSet, saveEnabledPlugins,
   loadPluginConfig, savePluginConfig, resolveConfig, missingRequired,
 } from './plugins.js';
-import type { ConfigValues, HookName, HookPayload, PluginContext, PomodoroPlugin, Settings } from './types.js';
+import type {
+  CommandLine, ConfigValues, HookName, HookPayload, PluginCommand, PluginContext, PomodoroPlugin, Settings,
+} from './types.js';
 
 export interface PluginEntry {
   plugin: PomodoroPlugin;
@@ -16,7 +18,26 @@ export interface PluginEntry {
   active: boolean;
 }
 
-const EXIT_TIMEOUT_MS = 3000;
+export interface RegisteredCommand {
+  /** Without the leading slash. */
+  name: string;
+  description: string;
+  pluginName: string;
+}
+
+const EXIT_TIMEOUT_MS    = 3000;
+const COMMAND_TIMEOUT_MS = 10_000;
+
+/** Slash commands the app itself owns — plugins can't take these names. */
+export const RESERVED_COMMANDS = ['start', 'settings', 'plugins', 'exit'];
+
+function isValidCommand(c: unknown): c is PluginCommand {
+  if (c === null || typeof c !== 'object') return false;
+  const cmd = c as Record<string, unknown>;
+  return typeof cmd.name === 'string' && /^[a-z0-9-]+$/.test(cmd.name)
+    && typeof cmd.description === 'string'
+    && typeof cmd.run === 'function';
+}
 
 /**
  * Owns plugin state and lifecycle outside React, so hooks can be emitted from anywhere
@@ -33,6 +54,7 @@ export class PluginHost {
     const enabled = loadEnabledSet(loaded.map(l => l.plugin.name));
     this.entries = loaded.map(({ plugin, builtin }) =>
       this.buildEntry(plugin, builtin, enabled.has(plugin.name), loadPluginConfig(plugin.name)));
+    this.reportCommandProblems();
     this.notify();
     for (const entry of this.entries) {
       if (entry.active) this.call(entry, 'onInit', {});
@@ -47,6 +69,47 @@ export class PluginHost {
   };
 
   getSnapshot = (): readonly PluginEntry[] => this.entries;
+
+  // ── Commands ──────────────────────────────────────────────────────────────
+
+  /** Commands of active plugins; on a name clash the first plugin wins. */
+  commands(entries: readonly PluginEntry[] = this.entries): RegisteredCommand[] {
+    const taken = new Set(RESERVED_COMMANDS);
+    const result: RegisteredCommand[] = [];
+    for (const entry of entries) {
+      if (!entry.active) continue;
+      for (const cmd of entry.plugin.commands ?? []) {
+        if (!isValidCommand(cmd) || taken.has(cmd.name)) continue;
+        taken.add(cmd.name);
+        result.push({ name: cmd.name, description: cmd.description, pluginName: entry.plugin.name });
+      }
+    }
+    return result;
+  }
+
+  /** Runs a plugin command; failures and timeouts come back as an error line. */
+  async runCommand(name: string): Promise<CommandLine[]> {
+    const registered = this.commands().find(c => c.name === name);
+    const entry = this.entries.find(e => e.plugin.name === registered?.pluginName);
+    const cmd = entry?.plugin.commands?.find(c => c.name === name);
+    if (!entry || !cmd) return [{ text: `Unknown command /${name}`, color: 'red' }];
+
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`timed out after ${COMMAND_TIMEOUT_MS / 1000}s`)), COMMAND_TIMEOUT_MS);
+      });
+      const lines = await Promise.race([
+        Promise.resolve(cmd.run.call(cmd, { settings: this.settings, config: entry.config })),
+        timeout,
+      ]);
+      return Array.isArray(lines) ? lines : [{ text: `/${name} returned no lines`, color: 'red' }];
+    } catch (err) {
+      return [{ text: `/${name} failed: ${err instanceof Error ? err.message : String(err)}`, color: 'red' }];
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
   // ── Events ────────────────────────────────────────────────────────────────
 
@@ -118,6 +181,21 @@ export class PluginHost {
     } catch (err) {
       report(err);
       return Promise.resolve();
+    }
+  }
+
+  private reportCommandProblems(): void {
+    const taken = new Map(RESERVED_COMMANDS.map(n => [n, 'pomodoro-cli']));
+    for (const { plugin } of this.entries) {
+      for (const cmd of plugin.commands ?? []) {
+        if (!isValidCommand(cmd)) {
+          console.error(`[pomodoro-cli] Plugin "${plugin.name}" has an invalid command (needs a lowercase name, description and run()) — ignoring it.`);
+        } else if (taken.has(cmd.name)) {
+          console.error(`[pomodoro-cli] Plugin "${plugin.name}" command /${cmd.name} clashes with ${taken.get(cmd.name)} — ignoring it.`);
+        } else {
+          taken.set(cmd.name, `plugin "${plugin.name}"`);
+        }
+      }
     }
   }
 

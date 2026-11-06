@@ -10,9 +10,11 @@ interface Props {
   onStart: () => void;
   onSettings: () => void;
   onPlugins: () => void;
+  pluginCommands: { name: string; description: string }[];
+  onPluginCommand: (name: string) => void;
 }
 
-export default function Menu({ settings, onStart, onSettings, onPlugins }: Props) {
+export default function Menu({ settings, onStart, onSettings, onPlugins, pluginCommands, onPluginCommand }: Props) {
   const { exit } = useApp();
   const [value, setValue] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -21,6 +23,7 @@ export default function Menu({ settings, onStart, onSettings, onPlugins }: Props
     { name: '/start',    description: 'Start the Pomodoro timer',  action: onStart    },
     { name: '/settings', description: 'Configure timer durations', action: onSettings },
     { name: '/plugins',  description: 'Manage plugins',            action: onPlugins  },
+    ...pluginCommands.map(c => ({ name: `/${c.name}`, description: c.description, action: () => onPluginCommand(c.name) })),
     { name: '/exit',     description: 'Exit the app',              action: exit       },
   ];
 

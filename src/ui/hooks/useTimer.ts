@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { PhaseName, Settings } from '../../types.js';
+import type { PhaseInfo, PhaseName, Settings } from '../../types.js';
 
 export function buildDurations(settings: Settings): Record<PhaseName, number> {
   return {
@@ -23,15 +23,14 @@ export interface TimerActions {
   jumpTo: (phase: PhaseName) => void;
 }
 
-/** `sessions` is the number of completed focus sessions after the event. */
 export interface TimerCallbacks {
-  onPhaseChange?: (phase: PhaseName, sessions: number) => void;
-  onTimerStart?:  (phase: PhaseName, sessions: number) => void;
-  onPause?:       (phase: PhaseName, sessions: number) => void;
-  onResume?:      (phase: PhaseName, sessions: number) => void;
-  onReset?:       (phase: PhaseName, sessions: number) => void;
-  onPhaseEnd?:    (phase: PhaseName, sessions: number) => void;
-  onPhaseSkip?:   (phase: PhaseName, sessions: number) => void;
+  onPhaseChange?: (info: PhaseInfo) => void;
+  onTimerStart?:  (info: PhaseInfo) => void;
+  onPause?:       (info: PhaseInfo) => void;
+  onResume?:      (info: PhaseInfo) => void;
+  onReset?:       (info: PhaseInfo) => void;
+  onPhaseEnd?:    (info: PhaseInfo) => void;
+  onPhaseSkip?:   (info: PhaseInfo) => void;
 }
 
 export type Timer = TimerState & TimerActions;
@@ -52,6 +51,14 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
   // Latest durations, so memoised callbacks never see stale values
   const durationsRef = useRef(durations);
   durationsRef.current = durations;
+
+  // Snapshot of the timer for plugin events
+  const info = (p: PhaseName, s: number, left: number): PhaseInfo => ({
+    phase: p,
+    sessions: s,
+    durationSeconds: durationsRef.current[p],
+    elapsedSeconds: Math.max(0, durationsRef.current[p] - left),
+  });
 
   // Change phase and reset its time in the same render (setState calls are batched)
   const goTo = useCallback((p: PhaseName) => {
@@ -86,7 +93,7 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
   useEffect(() => {
     startedInPhase.current = false;
     if (isFirstPhaseRender.current) { isFirstPhaseRender.current = false; return; }
-    callbacksRef.current?.onPhaseChange?.(phase, sessions);
+    callbacksRef.current?.onPhaseChange?.(info(phase, sessions, durationsRef.current[phase]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -101,7 +108,7 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
   useEffect(() => {
     if (!running || timeLeft > 0) return;
     setRunning(false);
-    callbacksRef.current?.onPhaseEnd?.(phase, phase === 'work' ? sessions + 1 : sessions);
+    callbacksRef.current?.onPhaseEnd?.(info(phase, phase === 'work' ? sessions + 1 : sessions, 0));
     advancePhase(sessions, phase);
   }, [running, timeLeft, phase, sessions, advancePhase]);
 
@@ -113,23 +120,23 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
     toggleRunning: () => {
       const cb = callbacksRef.current;
       if (running) {
-        cb?.onPause?.(phase, sessions);
+        cb?.onPause?.(info(phase, sessions, timeLeft));
       } else if (startedInPhase.current) {
-        cb?.onResume?.(phase, sessions);
+        cb?.onResume?.(info(phase, sessions, timeLeft));
       } else {
         startedInPhase.current = true;
-        cb?.onTimerStart?.(phase, sessions);
+        cb?.onTimerStart?.(info(phase, sessions, timeLeft));
       }
       setRunning(r => !r);
     },
     resetPhase: () => {
+      callbacksRef.current?.onReset?.(info(phase, sessions, timeLeft));
       setTimeLeft(durations[phase]);
       setRunning(false);
       startedInPhase.current = false;
-      callbacksRef.current?.onReset?.(phase, sessions);
     },
     skipPhase: () => {
-      callbacksRef.current?.onPhaseSkip?.(phase, phase === 'work' ? sessions + 1 : sessions);
+      callbacksRef.current?.onPhaseSkip?.(info(phase, phase === 'work' ? sessions + 1 : sessions, timeLeft));
       advancePhase(sessions, phase);
     },
     jumpTo:        (p: PhaseName) => { if (p !== phase) goTo(p); },
