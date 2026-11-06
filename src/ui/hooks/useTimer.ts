@@ -29,7 +29,9 @@ export interface TimerCallbacks {
   onPhaseSkip?: (phase: PhaseName) => void;
 }
 
-export function useTimer(settings: Settings, callbacks?: TimerCallbacks): TimerState & TimerActions {
+export type Timer = TimerState & TimerActions;
+
+export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer {
   const durations = buildDurations(settings);
   const interval = settings.longBreakEvery;
 
@@ -58,36 +60,43 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): TimerS
     setRunning(false);
   }, [phase, settings.workMin, settings.shortBreakMin, settings.longBreakMin]);
 
-  // Fire onPhaseStart when phase transitions (skip the initial render)
+  // Fire onPhaseStart on phase transitions. The initial phase has no transition,
+  // so its onPhaseStart is deferred until the timer is first started.
+  const initialStartPending = useRef(true);
   const isFirstPhaseRender = useRef(true);
   useEffect(() => {
     if (isFirstPhaseRender.current) { isFirstPhaseRender.current = false; return; }
+    initialStartPending.current = false;
     callbacksRef.current?.onPhaseStart?.(phase);
   }, [phase]);
 
-  // Countdown tick
+  // Countdown tick — the updater stays pure; phase completion is handled below
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(() => {
-      setTimeLeft((t: number) => {
-        if (t <= 1) {
-          clearInterval(id);
-          callbacksRef.current?.onPhaseEnd?.(phase, sessions);
-          advancePhase(sessions, phase);
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
+    const id = setInterval(() => setTimeLeft(t => Math.max(0, t - 1)), 1000);
     return () => clearInterval(id);
-  }, [running, phase, sessions, advancePhase]);
+  }, [running]);
+
+  // Phase completion
+  useEffect(() => {
+    if (!running || timeLeft > 0) return;
+    setRunning(false);
+    callbacksRef.current?.onPhaseEnd?.(phase, sessions);
+    advancePhase(sessions, phase);
+  }, [running, timeLeft, phase, sessions, advancePhase]);
 
   return {
     phase,
     timeLeft,
     running,
     sessions,
-    toggleRunning: () => setRunning(r => !r),
+    toggleRunning: () => {
+      if (!running && initialStartPending.current) {
+        initialStartPending.current = false;
+        callbacksRef.current?.onPhaseStart?.(phase);
+      }
+      setRunning(r => !r);
+    },
     resetPhase:    () => { setTimeLeft(durations[phase]); setRunning(false); },
     skipPhase:     () => { callbacksRef.current?.onPhaseSkip?.(phase); advancePhase(sessions, phase); },
     jumpTo:        (p: PhaseName) => setPhase(p),
