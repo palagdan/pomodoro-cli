@@ -150,7 +150,6 @@ export default function Dashboard({ settings }: Props) {
                     borderRight={false}
                 >
                     <Text bold>Getting started</Text>
-                    <Text color="red">{'─'.repeat(28)}</Text>
                     <Box marginTop={1} flexDirection="column">
                         {COMMAND_HINTS.map(([name, hint]) => (
                             <Box key={name}>
