@@ -5,15 +5,67 @@ import { VERSION } from '../../constants.js';
 import { capitalize } from '../../utils.js';
 import type { Settings } from '../../types.js';
 
-const TOMATO: Array<{ text: string; color: string }> = [
-    { text: '       ▐█▌      ', color: 'green' },
-    { text: '     ▗▄█▟▙▄▖    ', color: 'green' },
-    { text: '   ▗████████▖   ', color: 'red' },
-    { text: '   ████████████  ', color: 'red' },
-    { text: '   ████████████  ', color: 'red' },
-    { text: '   ▝████████▘   ', color: 'red' },
-    { text: '    ▝▀▀▀▀▀▀▘    ', color: 'red' },
+// Pixel art: each character is one pixel (r = red, g = green, w = highlight, . = empty).
+// Two pixel rows are packed into one terminal line using half blocks.
+const TOMATO_PIXELS = [
+    '..........gg..........',
+    '..........gg..........',
+    '........rrggrr........',
+    '.....rrggggggggrr.....',
+    '...rggggrggggrggggr...',
+    '..rggrrrrrggrrrrrggr..',
+    '.rrrrwwrrrrrrrrrrrrrr.',
+    'rrrrwrrrrrrrrrrrrrrrrr',
+    'rrrrwrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrr',
+    '.rrrrrrrrrrrrrrrrrrrr.',
+    '.rrrrrrrrrrrrrrrrrrrr.',
+    '..rrrrrrrrrrrrrrrrrr..',
+    '....rrrrrrrrrrrrrr....',
+    '......rrrrrrrrrr......',
 ];
+
+const PIXEL_COLORS: Record<string, string> = { r: 'red', g: 'green', w: 'white' };
+
+interface Cell {
+    char: string;
+    color?: string;
+    backgroundColor?: string;
+}
+
+function toCell(top: string, bottom: string): Cell {
+    const t = PIXEL_COLORS[top];
+    const b = PIXEL_COLORS[bottom];
+    if (!t && !b) return { char: ' ' };
+    if (t === b)  return { char: '█', color: t };
+    if (!b)       return { char: '▀', color: t };
+    if (!t)       return { char: '▄', color: b };
+    return { char: '▀', color: t, backgroundColor: b };
+}
+
+// Merge neighbouring cells with the same colours into a single run of text
+function toLines(pixels: string[]): Cell[][] {
+    const lines: Cell[][] = [];
+    for (let y = 0; y < pixels.length; y += 2) {
+        const top = pixels[y]!;
+        const bottom = pixels[y + 1] ?? '';
+        const runs: Cell[] = [];
+        for (let x = 0; x < top.length; x++) {
+            const cell = toCell(top[x]!, bottom[x] ?? '.');
+            const last = runs[runs.length - 1];
+            if (last && last.color === cell.color && last.backgroundColor === cell.backgroundColor) {
+                last.char += cell.char;
+            } else {
+                runs.push(cell);
+            }
+        }
+        lines.push(runs);
+    }
+    return lines;
+}
+
+const TOMATO = toLines(TOMATO_PIXELS);
 
 const COMMAND_HINTS: Array<[string, string]> = [
     ['/start',    'begin a focus session'],
@@ -58,9 +110,13 @@ export default function Dashboard({ settings }: Props) {
                         <Text bold>!</Text>
                     </Box>
 
-                    {TOMATO.map((line, i) => (
-                        <Text key={i} color={line.color as any}>
-                            {line.text}
+                    {TOMATO.map((runs, i) => (
+                        <Text key={i}>
+                            {runs.map((run, j) => (
+                                <Text key={j} color={run.color as any} backgroundColor={run.backgroundColor as any}>
+                                    {run.char}
+                                </Text>
+                            ))}
                         </Text>
                     ))}
 
