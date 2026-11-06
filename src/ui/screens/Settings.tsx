@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
-import type { Settings } from '../../types';
+import type { Settings } from '../../types.js';
 
 interface Field {
   key: keyof Settings;

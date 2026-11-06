@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { PhaseName, Settings } from '../../types';
+import type { PhaseName, Settings } from '../../types.js';
 
 function buildDurations(settings: Settings): Record<PhaseName, number> {
   return {

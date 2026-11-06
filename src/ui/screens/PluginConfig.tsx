@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import type { PomodoroPlugin, PluginConfigField } from '../../types';
+import type { PomodoroPlugin, PluginConfigField } from '../../types.js';
 
 interface Props {
   plugin: PomodoroPlugin;

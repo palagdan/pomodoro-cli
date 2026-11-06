@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadPlugins, loadEnabledSet, saveEnabledPlugins, loadPluginConfig, savePluginConfig } from '../../plugins';
-import type { PomodoroPlugin, Settings } from '../../types';
+import { loadPlugins, loadEnabledSet, saveEnabledPlugins, loadPluginConfig, savePluginConfig } from '../../plugins.js';
+import type { PomodoroPlugin, Settings } from '../../types.js';
 
 export type PluginEmit = (event: string, ...args: unknown[]) => void;
 

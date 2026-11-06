@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
-import Dashboard from './Dashboard';
-import CommandPalette from '../components/CommandPalette';
-import type { Command, Settings } from '../../types';
+import Dashboard from './Dashboard.js';
+import CommandPalette from '../components/CommandPalette.js';
+import type { Command, Settings } from '../../types.js';
 
 interface Props {
   settings: Settings;

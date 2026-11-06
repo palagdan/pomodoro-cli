@@ -1,13 +1,13 @@
 import React from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
-import { PHASES } from '../../constants';
-import { useTimer } from '../hooks/useTimer';
-import TimerCard from '../components/TimerCard';
-import SessionCounter from '../components/SessionCounter';
-import PhaseIndicators from '../components/PhaseIndicators';
-import Controls from '../components/Controls';
-import type { Settings, PhaseName } from '../../types';
-import type { PluginEmit } from '../hooks/usePlugins';
+import { PHASES } from '../../constants.js';
+import { useTimer } from '../hooks/useTimer.js';
+import TimerCard from '../components/TimerCard.js';
+import SessionCounter from '../components/SessionCounter.js';
+import PhaseIndicators from '../components/PhaseIndicators.js';
+import Controls from '../components/Controls.js';
+import type { Settings, PhaseName } from '../../types.js';
+import type { PluginEmit } from '../hooks/usePlugins.js';
 
 interface Props {
   settings: Settings;

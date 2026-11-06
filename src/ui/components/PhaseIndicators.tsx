@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { PHASES } from '../../constants';
-import type { PhaseName } from '../../types';
+import { PHASES } from '../../constants.js';
+import type { PhaseName } from '../../types.js';
 
 const LABELS: Record<PhaseName, string> = {
   work:       '● Focus',

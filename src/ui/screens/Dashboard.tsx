@@ -1,9 +1,9 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import os from 'os';
-import { VERSION } from '../../constants';
-import { capitalize } from '../../utils';
-import type { Settings } from '../../types';
+import { VERSION } from '../../constants.js';
+import { capitalize } from '../../utils.js';
+import type { Settings } from '../../types.js';
 
 const TOMATO: Array<{ text: string; color: string }> = [
     { text: '       ▐█▌      ', color: 'green' },
