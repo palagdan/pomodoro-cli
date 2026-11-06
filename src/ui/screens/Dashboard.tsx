@@ -15,6 +15,13 @@ const TOMATO: Array<{ text: string; color: string }> = [
     { text: '    ▝▀▀▀▀▀▀▘    ', color: 'red' },
 ];
 
+const COMMAND_HINTS: Array<[string, string]> = [
+    ['/start',    'begin a focus session'],
+    ['/settings', 'change durations'],
+    ['/plugins',  'manage plugins'],
+    ['/exit',     'quit'],
+];
+
 interface Props {
     settings: Settings;
 }
@@ -87,11 +94,13 @@ export default function Dashboard({ settings }: Props) {
                 >
                     <Text bold>Getting started</Text>
                     <Text color="red">{'─'.repeat(28)}</Text>
-                    <Box marginTop={1} flexDirection="column" gap={1}>
-                        <Box>
-                            <Text color="cyan">/start </Text>
-                            <Text dimColor>begin a focus session</Text>
-                        </Box>
+                    <Box marginTop={1} flexDirection="column">
+                        {COMMAND_HINTS.map(([name, hint]) => (
+                            <Box key={name}>
+                                <Text color="cyan">{name.padEnd(10)}</Text>
+                                <Text dimColor>{hint}</Text>
+                            </Box>
+                        ))}
                     </Box>
                     <Box marginTop={2}>
                         <Text dimColor>type </Text>
