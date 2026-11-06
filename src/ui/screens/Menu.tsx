@@ -36,7 +36,6 @@ export default function Menu({ settings, onStart, onSettings, onPlugins }: Props
     if (!isSlashMode || filtered.length === 0) return;
     if (key.upArrow)   setSelectedIndex(i => Math.max(0, i - 1));
     if (key.downArrow) setSelectedIndex(i => Math.min(filtered.length - 1, i + 1));
-    if (key.return)    filtered[safeIndex]?.action();
     if (key.tab) { setValue(filtered[safeIndex]?.name ?? value); setSelectedIndex(0); }
   });
 
@@ -46,6 +45,10 @@ export default function Menu({ settings, onStart, onSettings, onPlugins }: Props
   }
 
   function handleSubmit(val: string) {
+    if (isSlashMode && filtered.length > 0) {
+      filtered[safeIndex]!.action();
+      return;
+    }
     const match = COMMANDS.find(c => c.name === val.trim());
     if (match) match.action();
   }
