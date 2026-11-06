@@ -64,7 +64,7 @@ async function importPlugin(filePath: string): Promise<PomodoroPlugin | null> {
 
 async function loadFromDir(dir: string, pattern: RegExp): Promise<PomodoroPlugin[]> {
   if (!fs.existsSync(dir)) return [];
-  const files = fs.readdirSync(dir).filter(f => pattern.test(f));
+  const files = fs.readdirSync(dir).filter(f => pattern.test(f)).sort();
   const results: PomodoroPlugin[] = [];
   for (const file of files) {
     const plugin = await importPlugin(path.join(dir, file));

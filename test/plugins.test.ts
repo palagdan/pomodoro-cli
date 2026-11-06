@@ -117,6 +117,14 @@ describe('loadPlugins', () => {
     expect(errors).not.toHaveBeenCalled();
   });
 
+  it('returns user plugins in file-name order', async () => {
+    writeUserPlugin('order-b.mjs', validObject('order-b'));
+    writeUserPlugin('order-a.mjs', validObject('order-a'));
+    const { loaded } = await run();
+    const names = loaded.filter(l => !l.builtin).map(l => l.plugin.name);
+    expect(names).toEqual(['order-a', 'order-b']);
+  });
+
   it('loads a user plugin exported as an object', async () => {
     writeUserPlugin('obj.mjs', validObject('user-obj'));
     const { loaded } = await run();
