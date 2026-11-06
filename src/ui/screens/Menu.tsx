@@ -24,6 +24,8 @@ export default function Menu({ settings, onStart, onSettings, onPlugins }: Props
     { name: '/exit',     description: 'Exit the app',              action: exit       },
   ];
 
+  const nameWidth = Math.max(...COMMANDS.map(c => c.name.length)) + 2;
+
   const isSlashMode = value.startsWith('/');
   const query = value.slice(1).toLowerCase();
   const filtered = isSlashMode
@@ -68,7 +70,7 @@ export default function Menu({ settings, onStart, onSettings, onPlugins }: Props
       </Box>
 
       {isSlashMode && filtered.length > 0 && (
-        <CommandPalette commands={filtered} selectedIndex={safeIndex} />
+        <CommandPalette commands={filtered} selectedIndex={safeIndex} nameWidth={nameWidth} />
       )}
 
       {isSlashMode && filtered.length === 0 && (

@@ -22,6 +22,8 @@ const COMMAND_HINTS: Array<[string, string]> = [
     ['/exit',     'quit'],
 ];
 
+const HINT_NAME_WIDTH = Math.max(...COMMAND_HINTS.map(([n]) => n.length)) + 2;
+
 interface Props {
     settings: Settings;
 }
@@ -97,7 +99,9 @@ export default function Dashboard({ settings }: Props) {
                     <Box marginTop={1} flexDirection="column">
                         {COMMAND_HINTS.map(([name, hint]) => (
                             <Box key={name}>
-                                <Text color="cyan">{name.padEnd(10)}</Text>
+                                <Box width={HINT_NAME_WIDTH} flexShrink={0}>
+                                    <Text color="cyan">{name}</Text>
+                                </Box>
                                 <Text dimColor>{hint}</Text>
                             </Box>
                         ))}

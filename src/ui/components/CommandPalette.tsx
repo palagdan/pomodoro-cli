@@ -5,9 +5,10 @@ import type { Command } from '../../types.js';
 interface Props {
   commands: Command[];
   selectedIndex: number;
+  nameWidth: number;
 }
 
-export default function CommandPalette({ commands, selectedIndex }: Props) {
+export default function CommandPalette({ commands, selectedIndex, nameWidth }: Props) {
   if (commands.length === 0) return null;
 
   return (
@@ -26,10 +27,12 @@ export default function CommandPalette({ commands, selectedIndex }: Props) {
             <Text color={active ? 'cyan' : undefined} dimColor={!active}>
               {active ? '▶ ' : '  '}
             </Text>
-            <Text bold={active} color={active ? 'cyan' : undefined}>
-              {cmd.name}
-            </Text>
-            <Text dimColor>{'  '}{cmd.description}</Text>
+            <Box width={nameWidth} flexShrink={0}>
+              <Text bold={active} color={active ? 'cyan' : undefined}>
+                {cmd.name}
+              </Text>
+            </Box>
+            <Text dimColor>{cmd.description}</Text>
           </Box>
         );
       })}
