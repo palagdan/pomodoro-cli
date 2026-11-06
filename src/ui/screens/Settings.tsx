@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import { Box, Text, useInput } from 'ink';
 import type { Settings } from '../../types.js';
 
 interface Field {
@@ -25,7 +25,6 @@ interface Props {
 }
 
 export default function SettingsScreen({ settings, onSave, onExit }: Props) {
-  const { exit } = useApp();
   const [draft, setDraft] = useState<Settings>({ ...settings });
   const [cursor, setCursor] = useState(0);
 
@@ -44,7 +43,7 @@ export default function SettingsScreen({ settings, onSave, onExit }: Props) {
     if (input === '-')  adjust(-1);
     if (input === '+' || input === '=') adjust(+1);
     if (key.return)     onSave(draft);
-    if (input === 'q' || (key.ctrl && input === 'c')) onExit ? onExit() : exit();
+    if (input === 'q' || key.escape) onExit();
   });
 
   return (

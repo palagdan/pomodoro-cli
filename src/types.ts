@@ -2,7 +2,6 @@ export type PhaseName = 'work' | 'shortBreak' | 'longBreak';
 
 export interface Phase {
   label: string;
-  duration: number;
   color: string;
 }
 

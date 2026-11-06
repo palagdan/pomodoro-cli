@@ -24,7 +24,7 @@ export default function App({ settings, onExit, emit }: Props) {
   });
 
   useInput((input, key) => {
-    if (input === 'q' || (key.ctrl && input === 'c')) onExit ? onExit() : exit();
+    if (input === 'q') onExit ? onExit() : exit();
     if (input === ' ')  toggleRunning();
     if (input === 'r')  resetPhase();
     if (input === 'n')  skipPhase();
