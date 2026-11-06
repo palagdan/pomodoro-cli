@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
-import type { Settings } from './types.js';
+import type { Settings } from '../../types';
 
 interface Field {
   key: keyof Settings;
@@ -12,10 +12,10 @@ interface Field {
 }
 
 const FIELDS: Field[] = [
-  { key: 'workMin',       label: 'Work duration',      unit: 'min',      min: 1,  max: 90, step: 1 },
-  { key: 'shortBreakMin', label: 'Short break',         unit: 'min',      min: 1,  max: 30, step: 1 },
-  { key: 'longBreakMin',  label: 'Long break',          unit: 'min',      min: 1,  max: 60, step: 1 },
-  { key: 'longBreakEvery',label: 'Long break every',    unit: 'sessions', min: 1,  max: 10, step: 1 },
+  { key: 'workMin',        label: 'Work duration',    unit: 'min',      min: 1, max: 90, step: 1 },
+  { key: 'shortBreakMin',  label: 'Short break',      unit: 'min',      min: 1, max: 30, step: 1 },
+  { key: 'longBreakMin',   label: 'Long break',       unit: 'min',      min: 1, max: 60, step: 1 },
+  { key: 'longBreakEvery', label: 'Long break every', unit: 'sessions', min: 1, max: 10, step: 1 },
 ];
 
 interface Props {
@@ -49,13 +49,10 @@ export default function SettingsScreen({ settings, onSave, onExit }: Props) {
 
   return (
     <Box flexDirection="column" alignItems="center" paddingY={1}>
-
-      {/* Header */}
       <Box marginBottom={1}>
         <Text bold color="red">⚙  Timer Settings</Text>
       </Box>
 
-      {/* Fields */}
       <Box
         borderStyle="round"
         borderColor="red"
@@ -88,12 +85,10 @@ export default function SettingsScreen({ settings, onSave, onExit }: Props) {
         })}
       </Box>
 
-      {/* Hint */}
       <Box marginTop={1} flexDirection="column" alignItems="center">
         <Text dimColor>↑↓ navigate   ←→ or +/- adjust</Text>
         <Text dimColor>↵ save and return   [q] discard</Text>
       </Box>
-
     </Box>
   );
 }

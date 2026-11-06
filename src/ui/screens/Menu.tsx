@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
-import Dashboard from './Dashboard.js';
-import CommandPalette from './components/CommandPalette.js';
-import type { Command, Settings } from './types.js';
+import Dashboard from './Dashboard';
+import CommandPalette from '../components/CommandPalette';
+import type { Command, Settings } from '../../types';
 
 interface Props {
   settings: Settings;
   onStart: () => void;
   onSettings: () => void;
+  onPlugins: () => void;
 }
 
-export default function Menu({ settings, onStart, onSettings }: Props) {
+export default function Menu({ settings, onStart, onSettings, onPlugins }: Props) {
   const { exit } = useApp();
   const [value, setValue] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -19,6 +20,7 @@ export default function Menu({ settings, onStart, onSettings }: Props) {
   const COMMANDS: Command[] = [
     { name: '/start',    description: 'Start the Pomodoro timer',  action: onStart    },
     { name: '/settings', description: 'Configure timer durations', action: onSettings },
+    { name: '/plugins',  description: 'Manage plugins',            action: onPlugins  },
     { name: '/exit',     description: 'Exit the app',              action: exit       },
   ];
 

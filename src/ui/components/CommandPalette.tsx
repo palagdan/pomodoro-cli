@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import type { Command } from '../types.js';
+import type { Command } from '../../types';
 
 interface Props {
   commands: Command[];

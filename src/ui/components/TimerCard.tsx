@@ -1,8 +1,8 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { PHASES } from '../constants.js';
-import { formatTime, progressBar } from '../utils.js';
-import type { PhaseName, Settings } from '../types.js';
+import { PHASES } from '../../constants';
+import { formatTime, progressBar } from '../../utils';
+import type { PhaseName, Settings } from '../../types';
 
 interface Props {
   phase: PhaseName;

@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { LONG_BREAK_INTERVAL } from '../constants.js';
-import type { PhaseName, Settings } from '../types.js';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { PhaseName, Settings } from '../../types';
 
 function buildDurations(settings: Settings): Record<PhaseName, number> {
   return {
@@ -24,7 +23,13 @@ export interface TimerActions {
   jumpTo: (phase: PhaseName) => void;
 }
 
-export function useTimer(settings: Settings): TimerState & TimerActions {
+export interface TimerCallbacks {
+  onPhaseStart?: (phase: PhaseName) => void;
+  onPhaseEnd?: (phase: PhaseName, sessions: number) => void;
+  onPhaseSkip?: (phase: PhaseName) => void;
+}
+
+export function useTimer(settings: Settings, callbacks?: TimerCallbacks): TimerState & TimerActions {
   const durations = buildDurations(settings);
   const interval = settings.longBreakEvery;
 
@@ -32,6 +37,10 @@ export function useTimer(settings: Settings): TimerState & TimerActions {
   const [timeLeft, setTimeLeft] = useState(durations.work);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
+
+  // Keep callbacks in a ref so interval closures always call the latest version
+  const callbacksRef = useRef(callbacks);
+  useEffect(() => { callbacksRef.current = callbacks; }, [callbacks]);
 
   const advancePhase = useCallback((currentSessions: number, fromPhase: PhaseName) => {
     if (fromPhase === 'work') {
@@ -49,6 +58,13 @@ export function useTimer(settings: Settings): TimerState & TimerActions {
     setRunning(false);
   }, [phase, settings.workMin, settings.shortBreakMin, settings.longBreakMin]);
 
+  // Fire onPhaseStart when phase transitions (skip the initial render)
+  const isFirstPhaseRender = useRef(true);
+  useEffect(() => {
+    if (isFirstPhaseRender.current) { isFirstPhaseRender.current = false; return; }
+    callbacksRef.current?.onPhaseStart?.(phase);
+  }, [phase]);
+
   // Countdown tick
   useEffect(() => {
     if (!running) return;
@@ -56,6 +72,7 @@ export function useTimer(settings: Settings): TimerState & TimerActions {
       setTimeLeft((t: number) => {
         if (t <= 1) {
           clearInterval(id);
+          callbacksRef.current?.onPhaseEnd?.(phase, sessions);
           advancePhase(sessions, phase);
           return 0;
         }
@@ -72,7 +89,7 @@ export function useTimer(settings: Settings): TimerState & TimerActions {
     sessions,
     toggleRunning: () => setRunning(r => !r),
     resetPhase:    () => { setTimeLeft(durations[phase]); setRunning(false); },
-    skipPhase:     () => advancePhase(sessions, phase),
+    skipPhase:     () => { callbacksRef.current?.onPhaseSkip?.(phase); advancePhase(sessions, phase); },
     jumpTo:        (p: PhaseName) => setPhase(p),
   };
 }
