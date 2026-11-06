@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import React, { useState } from 'react';
 import { render } from 'ink';
 import Menu from './src/ui/screens/Menu.js';
