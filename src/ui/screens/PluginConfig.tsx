@@ -32,6 +32,7 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
   const [mode, setMode]           = useState<FormMode>('navigate');
   const [draft, setDraft]         = useState<Record<string, unknown>>(() => initDraft(fields, values));
   const [editValue, setEditValue] = useState('');
+  const [missing, setMissing]     = useState<string[]>([]);
 
   const field = fields[cursor];
 
@@ -46,6 +47,7 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
 
   // Navigation mode — arrows, adjustments, save, enter-to-edit
   useInput((input, key) => {
+    setMissing([]);
     if (input === 'q' || key.escape) { onExit(); return; }
     if (key.upArrow)   setCursor(i => Math.max(0, i - 1));
     if (key.downArrow) setCursor(i => Math.min(fields.length - 1, i + 1));
@@ -62,12 +64,21 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
       setMode('editing');
     }
     if (input === 's') {
+      const absent = fields.filter(f => {
+        if (!f.required) return false;
+        const v = draft[f.key];
+        if (f.type === 'string') return String(v ?? '').trim() === '';
+        if (f.type === 'number') return !Number.isFinite(Number(v));
+        return false;
+      }).map(f => f.label);
+      if (absent.length > 0) { setMissing(absent); return; }
       onSave(draft);
     }
   }, { isActive: mode === 'navigate' });
 
   // Edit mode — only Escape cancels; TextInput handles Enter via onSubmit
   useInput((_input, key) => {
+    setMissing([]);
     if (key.escape) setMode('navigate');
   }, { isActive: mode === 'editing' });
 
@@ -136,6 +147,12 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
           })
         )}
       </Box>
+
+      {missing.length > 0 && (
+        <Box marginTop={1}>
+          <Text color="red">Required: {missing.join(', ')}</Text>
+        </Box>
+      )}
 
       <Box marginTop={1} flexDirection="column" alignItems="center">
         {hasNumbers && <Text dimColor>←→ or +/- adjust numbers</Text>}
