@@ -6,23 +6,31 @@ import Settings from './src/ui/screens/Settings.js';
 import PluginList from './src/ui/screens/PluginList.js';
 import PluginConfig from './src/ui/screens/PluginConfig.js';
 import { usePlugins } from './src/ui/hooks/usePlugins.js';
+import { useTimer } from './src/ui/hooks/useTimer.js';
+import { loadSettings, saveSettings } from './src/storage.js';
 import type { Settings as SettingsType, PomodoroPlugin, Screen } from './src/types.js';
-import { DEFAULT_SETTINGS } from './src/constants.js';
 
 function Root() {
   const [screen, setScreen]             = useState<Screen>('menu');
-  const [settings, setSettings]         = useState<SettingsType>(DEFAULT_SETTINGS);
+  const [settings, setSettings]         = useState<SettingsType>(loadSettings);
   const [activePlugin, setActivePlugin] = useState<PomodoroPlugin | null>(null);
   const { plugins, enabled, pluginConfigs, emit, toggle, saveConfig } = usePlugins(settings);
 
+  // Timer lives here so sessions and the running countdown survive screen changes
+  const timer = useTimer(settings, {
+    onPhaseStart: p => emit('onPhaseStart', p, settings),
+    onPhaseEnd:   (p, s) => emit('onPhaseEnd', p, s, settings),
+    onPhaseSkip:  p => emit('onPhaseSkip', p),
+  });
+
   if (screen === 'timer') {
-    return <App settings={settings} onExit={() => setScreen('menu')} emit={emit} />;
+    return <App settings={settings} timer={timer} onExit={() => setScreen('menu')} />;
   }
   if (screen === 'settings') {
     return (
       <Settings
         settings={settings}
-        onSave={s => { setSettings(s); emit('onSettingsChange', s); setScreen('menu'); }}
+        onSave={s => { setSettings(s); saveSettings(s); emit('onSettingsChange', s); setScreen('menu'); }}
         onExit={() => setScreen('menu')}
       />
     );

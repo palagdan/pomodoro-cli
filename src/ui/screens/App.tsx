@@ -1,29 +1,24 @@
 import React from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import { PHASES } from '../../constants.js';
-import { useTimer } from '../hooks/useTimer.js';
 import TimerCard from '../components/TimerCard.js';
 import SessionCounter from '../components/SessionCounter.js';
 import PhaseIndicators from '../components/PhaseIndicators.js';
 import Controls from '../components/Controls.js';
-import type { Settings, PhaseName } from '../../types.js';
-import type { PluginEmit } from '../hooks/usePlugins.js';
+import type { Settings } from '../../types.js';
+import type { Timer } from '../hooks/useTimer.js';
 
 interface Props {
   settings: Settings;
+  timer: Timer;
   onExit?: () => void;
-  emit?: PluginEmit;
 }
 
-export default function App({ settings, onExit, emit }: Props) {
+export default function App({ settings, timer, onExit }: Props) {
   const { exit } = useApp();
-  const { phase, timeLeft, running, sessions, toggleRunning, resetPhase, skipPhase, jumpTo } = useTimer(settings, {
-    onPhaseStart: (p: PhaseName) => emit?.('onPhaseStart', p, settings),
-    onPhaseEnd:   (p: PhaseName, s: number) => emit?.('onPhaseEnd', p, s, settings),
-    onPhaseSkip:  (p: PhaseName) => emit?.('onPhaseSkip', p),
-  });
+  const { phase, timeLeft, running, sessions, toggleRunning, resetPhase, skipPhase, jumpTo } = timer;
 
-  useInput((input, key) => {
+  useInput(input => {
     if (input === 'q') onExit ? onExit() : exit();
     if (input === ' ')  toggleRunning();
     if (input === 'r')  resetPhase();
