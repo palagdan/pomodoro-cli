@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { PhaseName, Settings } from '../../types.js';
 
-function buildDurations(settings: Settings): Record<PhaseName, number> {
+export function buildDurations(settings: Settings): Record<PhaseName, number> {
   return {
     work:       settings.workMin       * 60,
     shortBreak: settings.shortBreakMin * 60,

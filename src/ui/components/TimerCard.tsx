@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import { PHASES } from '../../constants.js';
 import { formatTime, progressBar } from '../../utils.js';
+import { buildDurations } from '../hooks/useTimer.js';
 import type { PhaseName, Settings } from '../../types.js';
 
 interface Props {
@@ -11,17 +12,11 @@ interface Props {
   settings: Settings;
 }
 
-function phaseDuration(phase: PhaseName, settings: Settings): number {
-  if (phase === 'work')       return settings.workMin * 60;
-  if (phase === 'shortBreak') return settings.shortBreakMin * 60;
-  return settings.longBreakMin * 60;
-}
-
 export default function TimerCard({ phase, timeLeft, running, settings }: Props) {
   const currentPhase = PHASES[phase];
-  const total   = phaseDuration(phase, settings);
+  const total   = buildDurations(settings)[phase];
   const bar     = progressBar(timeLeft, total);
-  const percent = Math.round((1 - timeLeft / total) * 100);
+  const percent = Math.max(0, Math.min(100, Math.round((1 - timeLeft / total) * 100)));
 
   return (
     <Box
