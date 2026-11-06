@@ -44,21 +44,33 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
   const callbacksRef = useRef(callbacks);
   useEffect(() => { callbacksRef.current = callbacks; }, [callbacks]);
 
+  // Latest durations, so memoised callbacks never see stale values
+  const durationsRef = useRef(durations);
+  durationsRef.current = durations;
+
+  // Change phase and reset its time in the same render (setState calls are batched)
+  const goTo = useCallback((p: PhaseName) => {
+    setPhase(p);
+    setTimeLeft(durationsRef.current[p]);
+    setRunning(false);
+  }, []);
+
   const advancePhase = useCallback((currentSessions: number, fromPhase: PhaseName) => {
     if (fromPhase === 'work') {
       const next = currentSessions + 1;
       setSessions(next);
-      setPhase(next % interval === 0 ? 'longBreak' : 'shortBreak');
+      goTo(next % interval === 0 ? 'longBreak' : 'shortBreak');
     } else {
-      setPhase('work');
+      goTo('work');
     }
-  }, [interval]);
+  }, [interval, goTo]);
 
-  // Reset timer when phase or settings change
+  // Reset timer when durations change
   useEffect(() => {
     setTimeLeft(durations[phase]);
     setRunning(false);
-  }, [phase, settings.workMin, settings.shortBreakMin, settings.longBreakMin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.workMin, settings.shortBreakMin, settings.longBreakMin]);
 
   // Fire onPhaseStart on phase transitions. The initial phase has no transition,
   // so its onPhaseStart is deferred until the timer is first started.
@@ -99,6 +111,6 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
     },
     resetPhase:    () => { setTimeLeft(durations[phase]); setRunning(false); },
     skipPhase:     () => { callbacksRef.current?.onPhaseSkip?.(phase); advancePhase(sessions, phase); },
-    jumpTo:        (p: PhaseName) => setPhase(p),
+    jumpTo:        (p: PhaseName) => { if (p !== phase) goTo(p); },
   };
 }
