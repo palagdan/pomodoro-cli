@@ -2,6 +2,9 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import type { Command } from '../../types.js';
 
+// Names column is at least this wide so long command names fit, like Claude Code's menu.
+const MIN_NAME_WIDTH = 24;
+
 interface Props {
   commands: Command[];
   selectedIndex: number;
@@ -18,7 +21,7 @@ export default function CommandPalette({ commands, selectedIndex, nameWidth }: P
       borderStyle="round"
       borderColor="gray"
       paddingX={1}
-      width={44}
+      width={80}
     >
       {commands.map((cmd, i) => {
         const active = i === selectedIndex;
@@ -27,7 +30,7 @@ export default function CommandPalette({ commands, selectedIndex, nameWidth }: P
             <Text color={active ? 'cyan' : undefined} dimColor={!active}>
               {active ? '▶ ' : '  '}
             </Text>
-            <Box width={nameWidth} flexShrink={0}>
+            <Box width={Math.max(MIN_NAME_WIDTH, nameWidth)} flexShrink={0}>
               <Text bold={active} color={active ? 'cyan' : undefined}>
                 {cmd.name}
               </Text>
