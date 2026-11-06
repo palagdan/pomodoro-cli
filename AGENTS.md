@@ -34,18 +34,20 @@ index.tsx                 Root component + screen routing (shebang for the bin)
 tsconfig.build.json       Build config: compiles to dist/ (gitignored, published bin)
 .versionrc.json           commit-and-tag-version config (changelog + bump)
 src/
-  types.ts                PhaseName, Phase, Settings, Command, Screen, PomodoroPlugin
+  types.ts                PhaseName, Phase, Settings, Command, Screen, plugin API types (PomodoroPlugin, PluginHooks, contexts)
+  plugin-api.ts           Public plugin API entry (definePlugin, PLUGIN_API_VERSION); exported as "<pkg>/plugin"
   constants.ts            PHASES record, LONG_BREAK_INTERVAL, DEFAULT_SETTINGS, VERSION
   utils.ts                formatTime, progressBar, capitalize
   storage.ts              Settings persistence
-  plugins.ts              Plugin discovery, enabled/disabled state, plugin config files
+  plugins.ts              Plugin discovery + apiVersion check, enabled/disabled state, config files (0600)
+  pluginHost.ts           PluginHost: plugin lifecycle (init/exit/config change), emit()
   plugins/
     sound.ts              Built-in: system sound on phase start (macOS)
     desktop-notify.ts     Built-in: desktop notification on phase end
   ui/
     hooks/
       useTimer.ts         Timer state: phase, timeLeft, running, sessions + actions
-      usePlugins.ts       Loads plugins, enabled set, configs, emit()
+      usePlugins.ts       Subscribes React to the PluginHost (plugin entries)
     screens/
       App.tsx             Timer screen
       Menu.tsx            Menu screen (slash commands + Dashboard)
@@ -117,12 +119,10 @@ Edit `src/ui/screens/Menu.tsx` — add an entry to the `COMMANDS` array:
 2. Add a conditional branch in `<Root>` rendering the new component
 3. Pass `onExit: () => void` prop for navigating back to menu
 
-### Plugins
-Built-in plugins live in `src/plugins/`; user plugins in `~/.pomodoro-cli/plugins/*.js|mjs`.
-A plugin's default export is a class or an object with a `name` (`[A-Za-z0-9._-]+`).
-Optional hooks per `PomodoroPlugin` in `src/types.ts`: `onInit`, `onPhaseStart`, `onPhaseEnd`, `onPhaseSkip`, `onSettingsChange`; optional `config` fields + `configure(values)`.
-Plugins are enabled by default; disabled names are stored in `~/.pomodoro-cli/plugins-disabled.json`.
-
-### Add a plugin hook
-`useTimer` exposes: `{ phase, timeLeft, running, sessions, toggleRunning, resetPhase, skipPhase, jumpTo }`.
-Wrap or extend the hook to inject side effects (sound, notifications, logging) without touching UI components.
+### Plugin system
+Built-in plugins live in `src/plugins/`; user plugins in `~/.pomodoro-cli/plugins/*.js|mjs` (same name replaces a built-in). A plugin default-exports an object/class with `name` and `apiVersion: PLUGIN_API_VERSION`.
+- Hooks take a single context object (`{ settings, config }`, timer hooks add `{ phase, sessions }`), never positional args.
+- Add a new hook to `PluginHooks` in `src/types.ts`; `HookPayload` typing makes `host.emit(...)` type-checked.
+- `host.emit` is called from `TIMER_CALLBACKS` in `index.tsx`. Only active plugins (enabled and required config set) get hooks; `PluginHost` (`src/pluginHost.ts`) owns onInit/onExit/onConfigChange and `exit()` awaits onExit up to 3s.
+- Breaking change for third-party plugins (changing hook signatures, removing hooks): bump `PLUGIN_API_VERSION` and use a `feat!:` commit. Adding optional hooks or context fields is non-breaking.
+- Disabled names are stored in `~/.pomodoro-cli/plugins-disabled.json`; plugin config in `~/.pomodoro-cli/plugins/<name>.json`.

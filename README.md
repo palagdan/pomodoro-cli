@@ -51,27 +51,91 @@ Enable or disable plugins in `/plugins`.
 
 ### Custom plugins
 
-Drop a `.js` or `.mjs` file into `~/.pomodoro-cli/plugins/`. The default export is a class or an object with a `name` (`[A-Za-z0-9._-]+`).
+Drop a `.js` or `.mjs` file into `~/.pomodoro-cli/plugins/`. The default export is an object or a class with:
 
-Available hooks (all optional):
+- `name` - `[A-Za-z0-9._-]+`
+- `apiVersion: 1` - the plugin API version the plugin was written for
 
-- `onInit(settings)`
-- `onPhaseStart(phase, settings)`
-- `onPhaseEnd(phase, sessions, settings)`
-- `onPhaseSkip(phase)`
-- `onSettingsChange(settings)`
+Plugins without a matching `apiVersion` are skipped with a message. A user plugin with the same `name` as a built-in plugin replaces it.
 
 ```js
 // ~/.pomodoro-cli/plugins/hello.mjs
+import { appendFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+
+const LOG = join(homedir(), '.pomodoro-cli', 'hello.log');
+
+/** @type {import('@your-scope/pomodoro-cli/plugin').PomodoroPlugin} */
 export default {
   name: 'hello',
-  onPhaseEnd(phase, sessions) {
-    console.error(`Finished ${phase} (sessions: ${sessions})`);
+  apiVersion: 1,
+  config: [
+    { key: 'greeting', label: 'Greeting', type: 'string', default: 'Nice work!' },
+  ],
+  onPhaseEnd({ phase, sessions, config }) {
+    appendFileSync(LOG, `${new Date().toISOString()} ${config.greeting} (${phase} done, ${sessions} focus sessions)\n`);
+  },
+  onExit() {
+    appendFileSync(LOG, `${new Date().toISOString()} bye\n`);
   },
 };
 ```
 
-A plugin can declare `config` fields (`{ key, label, type: 'string' | 'number' | 'boolean', default, hint, ... }`) and a `configure(values)` method that receives the saved values. They can be edited from `/plugins`, and are stored in `~/.pomodoro-cli/plugins/<name>.json`.
+Do not use `console.log` in hooks: the terminal is owned by the UI and output would corrupt it. Errors thrown (or rejected) by a hook are caught and reported, and never crash the timer.
+
+If you install the package next to your plugins (`cd ~/.pomodoro-cli/plugins && npm i -D @your-scope/pomodoro-cli`), you get types and the `definePlugin` helper:
+
+```js
+import { definePlugin } from '@your-scope/pomodoro-cli/plugin';
+
+export default definePlugin({ name: 'hello', apiVersion: 1, onPhaseEnd(ctx) { /* ... */ } });
+```
+
+The same folder is where plugins `npm install` their own dependencies.
+
+#### Hooks
+
+All hooks are optional, may be `async`, and receive a single context object. Every hook gets `{ settings, config }`; timer hooks additionally get `{ phase, sessions }`, where `sessions` is the number of completed focus sessions after the event.
+
+| Hook               | Fires when                                                        | Context                         |
+|--------------------|-------------------------------------------------------------------|---------------------------------|
+| `onInit`           | the plugin becomes active (see below)                             | `settings`, `config`            |
+| `onExit`           | the plugin becomes inactive (disabled) or the app exits           | `settings`, `config`            |
+| `onConfigChange`   | the config of an active plugin is saved                           | `settings`, `config`            |
+| `onSettingsChange` | timer settings change                                             | `settings`, `config`            |
+| `onPhaseChange`    | the current phase switches (timer is paused at the new phase)     | + `phase`, `sessions`           |
+| `onTimerStart`     | the countdown of a phase starts for the first time                | + `phase`, `sessions`           |
+| `onPause`          | the timer is paused                                               | + `phase`, `sessions`           |
+| `onResume`         | the timer is resumed                                              | + `phase`, `sessions`           |
+| `onReset`          | the current phase is reset                                        | + `phase`, `sessions`           |
+| `onPhaseEnd`       | a phase runs down to 0                                            | + `phase`, `sessions`           |
+| `onPhaseSkip`      | the user skips the phase                                          | + `phase`, `sessions`           |
+
+`phase` is `'work'`, `'shortBreak'` or `'longBreak'`.
+
+#### Lifecycle
+
+A plugin is *active* when it is enabled and all its `required` config fields are filled. Only active plugins receive hooks.
+
+- `onInit` runs when a plugin becomes active: at app start, when enabled in `/plugins`, or when its required config is completed.
+- `onExit` runs when a plugin becomes inactive (disabled) or when the app exits. On quit it is awaited for up to 3 seconds, then the process exits.
+- Keep hooks fast, or make them `async`; do not block the timer.
+- Do not do work at module top level. Disabled plugins are still imported to read their `name`.
+
+#### Config fields
+
+Declare `config` fields to get a form in `/plugins`. Common options: `key`, `label`, `hint`, `required`, `default`.
+
+| `type`    | Extra options              | Value     |
+|-----------|----------------------------|-----------|
+| `string`  | `default`                  | `string`  |
+| `secret`  | - (no `default`)           | `string`  |
+| `number`  | `min`, `max`, `step`       | `number`  |
+| `boolean` | `default`                  | `boolean` |
+| `select`  | `options` (list of strings) | `string`  |
+
+Values reach hooks through `ctx.config`, with defaults already applied. They are stored in `~/.pomodoro-cli/plugins/<name>.json`, which is created with owner-only permissions (`0600`). `secret` fields are masked in the UI, but they are stored as plain text in that file.
 
 ## Development
 
