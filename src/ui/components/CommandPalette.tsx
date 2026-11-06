@@ -39,7 +39,7 @@ export default function CommandPalette({ commands, selectedIndex, nameWidth }: P
           </Box>
         );
       })}
-      <Box marginTop={1} borderTop borderStyle="single" borderColor="gray">
+      <Box marginTop={1} borderTop borderStyle="single" borderColor="gray" paddingX={1}>
         <Text dimColor>↑↓ navigate   ↵ run   tab complete</Text>
       </Box>
     </Box>
