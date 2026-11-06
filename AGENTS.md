@@ -16,14 +16,23 @@
 npm start              # start the app
 npm run dev            # start with file watching
 npx tsc --noEmit       # type-check — run this after every edit
+npm run build          # compile to dist/ via tsconfig.build.json
 ```
 
 **Always run `npx tsc --noEmit` after changes and fix all errors before finishing.**
 
+## Releasing
+
+- Commit messages must follow Conventional Commits (`feat:`, `fix:`, `feat!:` / `BREAKING CHANGE`); they drive the SemVer bump and `CHANGELOG.md`.
+- Never edit `version` in `package.json` by hand.
+- Release from `main` with the scripts: `npm run release:dry` to preview, then `npm run release` (`release:first` for the first release).
+
 ## Project Layout
 
 ```
-index.tsx                 Root component + screen routing
+index.tsx                 Root component + screen routing (shebang for the bin)
+tsconfig.build.json       Build config: compiles to dist/ (gitignored, published bin)
+.versionrc.json           commit-and-tag-version config (changelog + bump)
 src/
   types.ts                PhaseName, Phase, Settings, Command, Screen, PomodoroPlugin
   constants.ts            PHASES record, LONG_BREAK_INTERVAL, DEFAULT_SETTINGS, VERSION
