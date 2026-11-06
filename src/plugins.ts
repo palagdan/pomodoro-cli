@@ -1,19 +1,20 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import type { PomodoroPlugin } from './types.js';
 
 const CONFIG_DIR   = path.join(os.homedir(), '.pomodoro-cli');
 const PLUGINS_DIR  = path.join(CONFIG_DIR, 'plugins');
-const ENABLED_FILE = path.join(CONFIG_DIR, 'plugins-enabled.json');
+const ENABLED_FILE  = path.join(CONFIG_DIR, 'plugins-enabled.json'); // legacy
+const DISABLED_FILE = path.join(CONFIG_DIR, 'plugins-disabled.json');
 
 // Resolve the repo-bundled plugins/ directory relative to this source file
 const BUILTIN_PLUGINS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'plugins');
 
 async function importPlugin(filePath: string, builtin: boolean): Promise<PomodoroPlugin | null> {
   try {
-    const mod = await import(filePath) as { default?: unknown };
+    const mod = await import(pathToFileURL(filePath).href) as { default?: unknown };
     const exported = mod.default;
 
     let plugin: PomodoroPlugin;
@@ -30,6 +31,11 @@ async function importPlugin(filePath: string, builtin: boolean): Promise<Pomodor
 
     if (typeof plugin.name !== 'string') {
       process.stderr.write(`[pomodoro-cli] Plugin "${path.basename(filePath)}" must have a string "name" property — skipping.\n`);
+      return null;
+    }
+
+    if (!/^[A-Za-z0-9._-]+$/.test(plugin.name) || plugin.name.includes('..')) {
+      process.stderr.write(`[pomodoro-cli] Plugin "${path.basename(filePath)}" has an invalid name "${plugin.name}" — skipping.\n`);
       return null;
     }
 
@@ -64,19 +70,28 @@ export async function loadPlugins(): Promise<PomodoroPlugin[]> {
 }
 
 export function loadEnabledSet(plugins: PomodoroPlugin[]): Set<string> {
+  const names = plugins.map(p => p.name);
   try {
-    const raw = fs.readFileSync(ENABLED_FILE, 'utf8');
-    return new Set(JSON.parse(raw) as string[]);
+    const disabled = new Set(JSON.parse(fs.readFileSync(DISABLED_FILE, 'utf8')) as string[]);
+    return new Set(names.filter(n => !disabled.has(n)));
   } catch {
-    // No file yet — all discovered plugins are enabled by default
-    return new Set(plugins.map(p => p.name));
+    // fall through to legacy handling
+  }
+  try {
+    // Legacy: plugins-enabled.json listed enabled plugins; anything not in it is disabled
+    const legacy = new Set(JSON.parse(fs.readFileSync(ENABLED_FILE, 'utf8')) as string[]);
+    return new Set(names.filter(n => legacy.has(n)));
+  } catch {
+    // No files — all discovered plugins are enabled by default
+    return new Set(names);
   }
 }
 
-export function saveEnabledPlugins(enabled: Set<string>): void {
+export function saveEnabledPlugins(enabled: Set<string>, all: PomodoroPlugin[]): void {
   try {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
-    fs.writeFileSync(ENABLED_FILE, JSON.stringify([...enabled], null, 2), 'utf8');
+    const disabled = all.map(p => p.name).filter(n => !enabled.has(n));
+    fs.writeFileSync(DISABLED_FILE, JSON.stringify(disabled, null, 2), 'utf8');
   } catch {
     // Silently ignore write failures (permissions, read-only fs, etc.)
   }

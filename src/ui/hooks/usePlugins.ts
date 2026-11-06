@@ -63,10 +63,10 @@ export function usePlugins(settings: Settings) {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
-      saveEnabledPlugins(next);
+      saveEnabledPlugins(next, plugins);
       return next;
     });
-  }, []);
+  }, [plugins]);
 
   const saveConfig = useCallback((name: string, values: Record<string, unknown>) => {
     savePluginConfig(name, values);
