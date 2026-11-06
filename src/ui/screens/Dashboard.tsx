@@ -87,9 +87,10 @@ export default function Dashboard({ settings }: Props) {
         <Box borderStyle="round" borderColor="red" flexDirection="column" marginBottom={1} width={80}>
             {/* Title row */}
             <Box justifyContent="center" paddingY={0}>
+                {/* Emoji are avoided inside framed lines: terminals disagree on their width, which breaks border alignment. */}
                 <Text bold color="red">
                     {' '}
-                    🍅 Pomodoro CLI v{VERSION}{' '}
+                    ● Pomodoro CLI v{VERSION}{' '}
                 </Text>
             </Box>
 
