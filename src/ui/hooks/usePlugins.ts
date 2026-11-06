@@ -8,11 +8,11 @@ function callHandler(plugin: PomodoroPlugin, event: string, args: unknown[]): vo
   const handler = (plugin as unknown as Record<string, unknown>)[event];
   if (typeof handler !== 'function') return;
   try {
-    Promise.resolve((handler as (...a: unknown[]) => unknown)(...args)).catch(err => {
-      process.stderr.write(`[${plugin.name}] ${event} error: ${err}\n`);
+    Promise.resolve((handler as (...a: unknown[]) => unknown).apply(plugin, args)).catch(err => {
+      console.error(`[${plugin.name}] ${event} error: ${err}`);
     });
   } catch (err) {
-    process.stderr.write(`[${plugin.name}] ${event} error: ${err}\n`);
+    console.error(`[${plugin.name}] ${event} error: ${err}`);
   }
 }
 
@@ -32,7 +32,7 @@ export function usePlugins(settings: Settings) {
           const values = loadPluginConfig(p.name);
           configs[p.name] = values;
           try { p.configure?.(values); } catch (err) {
-            process.stderr.write(`[${p.name}] configure error: ${err}\n`);
+            console.error(`[${p.name}] configure error: ${err}`);
           }
         }
       }
@@ -73,7 +73,7 @@ export function usePlugins(settings: Settings) {
     setPluginConfigs(prev => ({ ...prev, [name]: values }));
     const plugin = plugins.find(p => p.name === name);
     try { plugin?.configure?.(values); } catch (err) {
-      process.stderr.write(`[${name}] configure error: ${err}\n`);
+      console.error(`[${name}] configure error: ${err}`);
     }
   }, [plugins]);
 

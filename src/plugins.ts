@@ -25,24 +25,24 @@ async function importPlugin(filePath: string, builtin: boolean): Promise<Pomodor
       // Pre-instantiated object export
       plugin = exported as PomodoroPlugin;
     } else {
-      process.stderr.write(`[pomodoro-cli] Plugin "${path.basename(filePath)}" must have a default export (class or object) — skipping.\n`);
+      console.error(`[pomodoro-cli] Plugin "${path.basename(filePath)}" must have a default export (class or object) — skipping.`);
       return null;
     }
 
     if (typeof plugin.name !== 'string') {
-      process.stderr.write(`[pomodoro-cli] Plugin "${path.basename(filePath)}" must have a string "name" property — skipping.\n`);
+      console.error(`[pomodoro-cli] Plugin "${path.basename(filePath)}" must have a string "name" property — skipping.`);
       return null;
     }
 
     if (!/^[A-Za-z0-9._-]+$/.test(plugin.name) || plugin.name.includes('..')) {
-      process.stderr.write(`[pomodoro-cli] Plugin "${path.basename(filePath)}" has an invalid name "${plugin.name}" — skipping.\n`);
+      console.error(`[pomodoro-cli] Plugin "${path.basename(filePath)}" has an invalid name "${plugin.name}" — skipping.`);
       return null;
     }
 
     if (builtin) Object.assign(plugin, { builtin: true });
     return plugin;
   } catch (err) {
-    process.stderr.write(`[pomodoro-cli] Failed to load plugin "${path.basename(filePath)}": ${err}\n`);
+    console.error(`[pomodoro-cli] Failed to load plugin "${path.basename(filePath)}": ${err}`);
     return null;
   }
 }
