@@ -7,22 +7,38 @@ import Settings from './src/ui/screens/Settings.js';
 import PluginList from './src/ui/screens/PluginList.js';
 import PluginConfig from './src/ui/screens/PluginConfig.js';
 import { usePlugins } from './src/ui/hooks/usePlugins.js';
+import { PluginHost, type PluginEntry } from './src/pluginHost.js';
 import { useTimer } from './src/ui/hooks/useTimer.js';
 import { loadSettings, saveSettings } from './src/storage.js';
-import type { Settings as SettingsType, PomodoroPlugin, Screen } from './src/types.js';
+import type { Settings as SettingsType, PhaseName, Screen } from './src/types.js';
+
+const initialSettings = loadSettings();
+const host = new PluginHost(initialSettings);
+await host.load();
+
+const phaseEvent = (event: 'onPhaseChange' | 'onTimerStart' | 'onPause' | 'onResume' | 'onReset' | 'onPhaseEnd' | 'onPhaseSkip') =>
+  (phase: PhaseName, sessions: number) => host.emit(event, { phase, sessions });
+
+// Stable across renders: forwards every timer event to the plugins
+const TIMER_CALLBACKS = {
+  onPhaseChange: phaseEvent('onPhaseChange'),
+  onTimerStart:  phaseEvent('onTimerStart'),
+  onPause:       phaseEvent('onPause'),
+  onResume:      phaseEvent('onResume'),
+  onReset:       phaseEvent('onReset'),
+  onPhaseEnd:    phaseEvent('onPhaseEnd'),
+  onPhaseSkip:   phaseEvent('onPhaseSkip'),
+};
 
 function Root() {
-  const [screen, setScreen]             = useState<Screen>('menu');
-  const [settings, setSettings]         = useState<SettingsType>(loadSettings);
-  const [activePlugin, setActivePlugin] = useState<PomodoroPlugin | null>(null);
-  const { plugins, enabled, pluginConfigs, emit, toggle, saveConfig } = usePlugins(settings);
+  const [screen, setScreen]           = useState<Screen>('menu');
+  const [settings, setSettings]       = useState<SettingsType>(initialSettings);
+  const [activeName, setActiveName]   = useState<string | null>(null);
+  const plugins = usePlugins(host);
+  const activeEntry = plugins.find(e => e.plugin.name === activeName);
 
   // Timer lives here so sessions and the running countdown survive screen changes
-  const timer = useTimer(settings, {
-    onPhaseStart: p => emit('onPhaseStart', p, settings),
-    onPhaseEnd:   (p, s) => emit('onPhaseEnd', p, s, settings),
-    onPhaseSkip:  p => emit('onPhaseSkip', p),
-  });
+  const timer = useTimer(settings, TIMER_CALLBACKS);
 
   if (screen === 'timer') {
     return <App settings={settings} timer={timer} onExit={() => setScreen('menu')} />;
@@ -31,17 +47,17 @@ function Root() {
     return (
       <Settings
         settings={settings}
-        onSave={s => { setSettings(s); saveSettings(s); emit('onSettingsChange', s); setScreen('menu'); }}
+        onSave={s => { setSettings(s); saveSettings(s); host.updateSettings(s); setScreen('menu'); }}
         onExit={() => setScreen('menu')}
       />
     );
   }
-  if (screen === 'pluginConfig' && activePlugin) {
+  if (screen === 'pluginConfig' && activeEntry) {
     return (
       <PluginConfig
-        plugin={activePlugin}
-        values={pluginConfigs[activePlugin.name] ?? {}}
-        onSave={values => { saveConfig(activePlugin.name, values); setScreen('plugins'); }}
+        plugin={activeEntry.plugin}
+        values={activeEntry.config}
+        onSave={values => { host.saveConfig(activeEntry.plugin.name, values); setScreen('plugins'); }}
         onExit={() => setScreen('plugins')}
       />
     );
@@ -49,12 +65,11 @@ function Root() {
   if (screen === 'plugins') {
     return (
       <PluginList
-        plugins={plugins}
-        enabled={enabled}
-        pluginConfigs={pluginConfigs}
-        onToggle={toggle}
-        onConfigure={p => { setActivePlugin(p); setScreen('pluginConfig'); }}
+        entries={plugins}
+        onToggle={(entry: PluginEntry) => host.setEnabled(entry.plugin.name, !entry.enabled)}
+        onConfigure={(entry: PluginEntry) => { setActiveName(entry.plugin.name); setScreen('pluginConfig'); }}
         onExit={() => setScreen('menu')}
+        initialName={activeName ?? undefined}
       />
     );
   }
@@ -68,4 +83,8 @@ function Root() {
   );
 }
 
-render(<Root />);
+const app = render(<Root />);
+await app.waitUntilExit();
+await host.exit();
+// Plugins may leave timers or sockets open — don't let them keep the process alive
+process.exit(0);

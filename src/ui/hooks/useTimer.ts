@@ -23,10 +23,15 @@ export interface TimerActions {
   jumpTo: (phase: PhaseName) => void;
 }
 
+/** `sessions` is the number of completed focus sessions after the event. */
 export interface TimerCallbacks {
-  onPhaseStart?: (phase: PhaseName) => void;
-  onPhaseEnd?: (phase: PhaseName, sessions: number) => void;
-  onPhaseSkip?: (phase: PhaseName) => void;
+  onPhaseChange?: (phase: PhaseName, sessions: number) => void;
+  onTimerStart?:  (phase: PhaseName, sessions: number) => void;
+  onPause?:       (phase: PhaseName, sessions: number) => void;
+  onResume?:      (phase: PhaseName, sessions: number) => void;
+  onReset?:       (phase: PhaseName, sessions: number) => void;
+  onPhaseEnd?:    (phase: PhaseName, sessions: number) => void;
+  onPhaseSkip?:   (phase: PhaseName, sessions: number) => void;
 }
 
 export type Timer = TimerState & TimerActions;
@@ -65,21 +70,24 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
     }
   }, [interval, goTo]);
 
+  // Whether the countdown has run at all in the current phase (start vs resume)
+  const startedInPhase = useRef(false);
+
   // Reset timer when durations change
   useEffect(() => {
     setTimeLeft(durations[phase]);
     setRunning(false);
+    startedInPhase.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.workMin, settings.shortBreakMin, settings.longBreakMin]);
 
-  // Fire onPhaseStart on phase transitions. The initial phase has no transition,
-  // so its onPhaseStart is deferred until the timer is first started.
-  const initialStartPending = useRef(true);
+  // Fire onPhaseChange on phase transitions (not for the initial phase)
   const isFirstPhaseRender = useRef(true);
   useEffect(() => {
+    startedInPhase.current = false;
     if (isFirstPhaseRender.current) { isFirstPhaseRender.current = false; return; }
-    initialStartPending.current = false;
-    callbacksRef.current?.onPhaseStart?.(phase);
+    callbacksRef.current?.onPhaseChange?.(phase, sessions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   // Countdown tick — the updater stays pure; phase completion is handled below
@@ -93,7 +101,7 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
   useEffect(() => {
     if (!running || timeLeft > 0) return;
     setRunning(false);
-    callbacksRef.current?.onPhaseEnd?.(phase, sessions);
+    callbacksRef.current?.onPhaseEnd?.(phase, phase === 'work' ? sessions + 1 : sessions);
     advancePhase(sessions, phase);
   }, [running, timeLeft, phase, sessions, advancePhase]);
 
@@ -103,14 +111,27 @@ export function useTimer(settings: Settings, callbacks?: TimerCallbacks): Timer 
     running,
     sessions,
     toggleRunning: () => {
-      if (!running && initialStartPending.current) {
-        initialStartPending.current = false;
-        callbacksRef.current?.onPhaseStart?.(phase);
+      const cb = callbacksRef.current;
+      if (running) {
+        cb?.onPause?.(phase, sessions);
+      } else if (startedInPhase.current) {
+        cb?.onResume?.(phase, sessions);
+      } else {
+        startedInPhase.current = true;
+        cb?.onTimerStart?.(phase, sessions);
       }
       setRunning(r => !r);
     },
-    resetPhase:    () => { setTimeLeft(durations[phase]); setRunning(false); },
-    skipPhase:     () => { callbacksRef.current?.onPhaseSkip?.(phase); advancePhase(sessions, phase); },
+    resetPhase: () => {
+      setTimeLeft(durations[phase]);
+      setRunning(false);
+      startedInPhase.current = false;
+      callbacksRef.current?.onReset?.(phase, sessions);
+    },
+    skipPhase: () => {
+      callbacksRef.current?.onPhaseSkip?.(phase, phase === 'work' ? sessions + 1 : sessions);
+      advancePhase(sessions, phase);
+    },
     jumpTo:        (p: PhaseName) => { if (p !== phase) goTo(p); },
   };
 }

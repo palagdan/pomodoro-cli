@@ -5,6 +5,13 @@
   "bin": {
     "pomodoro": "dist/index.js"
   },
+  "exports": {
+    "./plugin": {
+      "types": "./dist/src/plugin-api.d.ts",
+      "default": "./dist/src/plugin-api.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
     "README.md",

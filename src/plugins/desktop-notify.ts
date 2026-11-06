@@ -1,18 +1,23 @@
 import { execFile } from 'child_process';
-import type { PhaseName, PomodoroPlugin } from '../types.js';
+import { definePlugin } from '../plugin-api.js';
+import type { PhaseName } from '../plugin-api.js';
 
-export default class DesktopNotifyPlugin implements PomodoroPlugin {
-  readonly name = 'desktop-notify';
-  readonly description = 'Show a desktop notification when a phase ends';
+const messages: Record<PhaseName, { title: string; body: string }> = {
+  work:       { title: 'Focus session complete!', body: 'Time for a break.' },
+  shortBreak: { title: 'Short break over!',       body: 'Time to focus.'    },
+  longBreak:  { title: 'Long break over!',        body: 'Ready to focus?'   },
+};
 
-  private readonly messages: Record<PhaseName, { title: string; body: string }> = {
-    work:       { title: 'Focus session complete!', body: 'Time for a break.' },
-    shortBreak: { title: 'Short break over!',       body: 'Time to focus.'    },
-    longBreak:  { title: 'Long break over!',        body: 'Ready to focus?'   },
-  };
+export default definePlugin({
+  name: 'desktop-notify',
+  apiVersion: 1,
+  description: 'Show a desktop notification when a phase ends',
 
-  onPhaseEnd(phase: PhaseName): void {
-    const { title, body } = this.messages[phase];
+  onPhaseEnd({ phase, sessions }) {
+    const { title } = messages[phase];
+    const body = phase === 'work'
+      ? `${messages.work.body} (${sessions} ${sessions === 1 ? 'session' : 'sessions'} done)`
+      : messages[phase].body;
 
     if (process.platform === 'darwin') {
       const escaped = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -21,5 +26,5 @@ export default class DesktopNotifyPlugin implements PomodoroPlugin {
     } else if (process.platform === 'linux') {
       execFile('notify-send', [title, body], () => {});
     }
-  }
-}
+  },
+});

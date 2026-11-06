@@ -1,36 +1,23 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import type { PomodoroPlugin, PluginConfigField } from '../../types.js';
+import type { PomodoroPlugin, ConfigValues } from '../../types.js';
+import { resolveConfig, missingRequired } from '../../plugins.js';
 
 interface Props {
   plugin: PomodoroPlugin;
-  values: Record<string, unknown>;
-  onSave: (values: Record<string, unknown>) => void;
+  values: ConfigValues;
+  onSave: (values: ConfigValues) => void;
   onExit: () => void;
 }
 
 type FormMode = 'navigate' | 'editing';
 
-function initDraft(fields: PluginConfigField[], saved: Record<string, unknown>): Record<string, unknown> {
-  const draft: Record<string, unknown> = {};
-  for (const f of fields) {
-    if (saved[f.key] !== undefined) {
-      draft[f.key] = saved[f.key];
-    } else if (f.default !== undefined) {
-      draft[f.key] = f.default;
-    } else {
-      draft[f.key] = f.type === 'number' ? (f.min ?? 0) : f.type === 'boolean' ? false : '';
-    }
-  }
-  return draft;
-}
-
 export default function PluginConfig({ plugin, values, onSave, onExit }: Props) {
   const fields = plugin.config ?? [];
   const [cursor, setCursor]       = useState(0);
   const [mode, setMode]           = useState<FormMode>('navigate');
-  const [draft, setDraft]         = useState<Record<string, unknown>>(() => initDraft(fields, values));
+  const [draft, setDraft]         = useState<ConfigValues>(() => resolveConfig(plugin.config, values));
   const [editValue, setEditValue] = useState('');
   const [missing, setMissing]     = useState<string[]>([]);
 
@@ -63,14 +50,21 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
       setEditValue(String(draft[field.key] ?? ''));
       setMode('editing');
     }
+    if (field?.type === 'secret' && key.return) {
+      setEditValue('');
+      setMode('editing');
+    }
+    if (field?.type === 'select' && field.options.length > 0) {
+      const dir = key.rightArrow || key.return || input === ' ' ? 1 : key.leftArrow ? -1 : 0;
+      if (dir !== 0) {
+        const n   = field.options.length;
+        const idx = field.options.indexOf(String(draft[field.key]));
+        const next = field.options[((idx < 0 ? 0 : idx + dir) % n + n) % n]!;
+        setDraft(d => ({ ...d, [field.key]: next }));
+      }
+    }
     if (input === 's') {
-      const absent = fields.filter(f => {
-        if (!f.required) return false;
-        const v = draft[f.key];
-        if (f.type === 'string') return String(v ?? '').trim() === '';
-        if (f.type === 'number') return !Number.isFinite(Number(v));
-        return false;
-      }).map(f => f.label);
+      const absent = missingRequired(plugin.config, draft);
       if (absent.length > 0) { setMissing(absent); return; }
       onSave(draft);
     }
@@ -83,6 +77,7 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
   }, { isActive: mode === 'editing' });
 
   const hasNumbers = fields.some(f => f.type === 'number');
+  const hasSelects = fields.some(f => f.type === 'select');
 
   return (
     <Box flexDirection="column" alignItems="center" paddingY={1}>
@@ -114,14 +109,15 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
                 </Box>
 
                 <Box marginLeft={4}>
-                  {f.type === 'string' && active && mode === 'editing' ? (
+                  {(f.type === 'string' || f.type === 'secret') && active && mode === 'editing' ? (
                     <Box>
                       <Text color="green">❯ </Text>
                       <TextInput
                         value={editValue}
                         onChange={setEditValue}
+                        mask={f.type === 'secret' ? '•' : undefined}
                         onSubmit={val => {
-                          setDraft(d => ({ ...d, [f.key]: val }));
+                          if (f.type === 'string' || val !== '') setDraft(d => ({ ...d, [f.key]: val }));
                           setMode('navigate');
                         }}
                       />
@@ -132,7 +128,19 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
                     ) : (
                       <Text dimColor>{f.hint ?? '(not set)'}</Text>
                     )
+                  ) : f.type === 'secret' ? (
+                    String(value) ? (
+                      <Text color={active ? 'white' : 'gray'}>{'•'.repeat(Math.min(String(value).length, 12))}</Text>
+                    ) : (
+                      <Text dimColor>{f.hint ?? '(not set)'}</Text>
+                    )
                   ) : f.type === 'number' ? (
+                    <Box>
+                      {active && <Text dimColor>◀ </Text>}
+                      <Text bold={active} color={active ? 'white' : 'gray'}>{String(value)}</Text>
+                      {active && <Text dimColor> ▶</Text>}
+                    </Box>
+                  ) : f.type === 'select' ? (
                     <Box>
                       {active && <Text dimColor>◀ </Text>}
                       <Text bold={active} color={active ? 'white' : 'gray'}>{String(value)}</Text>
@@ -156,6 +164,7 @@ export default function PluginConfig({ plugin, values, onSave, onExit }: Props) 
 
       <Box marginTop={1} flexDirection="column" alignItems="center">
         {hasNumbers && <Text dimColor>←→ or +/- adjust numbers</Text>}
+        {hasSelects && <Text dimColor>←→ change selection</Text>}
         <Text dimColor>↑↓ navigate   ↵ edit/toggle   s save   q discard</Text>
       </Box>
     </Box>

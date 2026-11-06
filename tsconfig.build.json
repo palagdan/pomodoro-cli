@@ -5,7 +5,7 @@
     "rootDir": ".",
     "noEmit": false,
     "sourceMap": false,
-    "declaration": false
+    "declaration": true
   },
   "include": ["src", "index.tsx"]
 }
