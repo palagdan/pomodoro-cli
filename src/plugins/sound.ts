@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import type { PhaseName, PomodoroPlugin, PluginConfigField } from '../types.js';
 
 export default class SoundPlugin implements PomodoroPlugin {
@@ -18,15 +18,19 @@ export default class SoundPlugin implements PomodoroPlugin {
   };
 
   configure(values: Record<string, unknown>): void {
+    const pick = (v: unknown, fallback: string): string => {
+      const name = String(v ?? fallback);
+      return /^[A-Za-z0-9 _-]+$/.test(name) ? name : fallback;
+    };
     this.sounds = {
-      work:       String(values.workSound       ?? 'Glass'),
-      shortBreak: String(values.shortBreakSound ?? 'Blow'),
-      longBreak:  String(values.longBreakSound  ?? 'Purr'),
+      work:       pick(values.workSound,       'Glass'),
+      shortBreak: pick(values.shortBreakSound, 'Blow'),
+      longBreak:  pick(values.longBreakSound,  'Purr'),
     };
   }
 
   onPhaseStart(phase: PhaseName): void {
     if (process.platform !== 'darwin') return;
-    exec(`afplay /System/Library/Sounds/${this.sounds[phase]}.aiff`);
+    execFile('afplay', [`/System/Library/Sounds/${this.sounds[phase]}.aiff`], () => {});
   }
 }

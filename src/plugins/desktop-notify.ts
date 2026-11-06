@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import type { PhaseName, PomodoroPlugin } from '../types.js';
 
 export default class DesktopNotifyPlugin implements PomodoroPlugin {
@@ -15,10 +15,11 @@ export default class DesktopNotifyPlugin implements PomodoroPlugin {
     const { title, body } = this.messages[phase];
 
     if (process.platform === 'darwin') {
-      const escaped = (s: string) => s.replace(/"/g, '\\"');
-      exec(`osascript -e 'display notification "${escaped(body)}" with title "${escaped(title)}"'`);
+      const escaped = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const script = `display notification "${escaped(body)}" with title "${escaped(title)}"`;
+      execFile('osascript', ['-e', script], () => {});
     } else if (process.platform === 'linux') {
-      exec(`notify-send "${title}" "${body}"`);
+      execFile('notify-send', [title, body], () => {});
     }
   }
 }
