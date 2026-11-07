@@ -36,6 +36,7 @@ npm run build          # compile to dist/ via tsconfig.build.json
 - Commit messages must follow Conventional Commits (`feat:`, `fix:`, `feat!:` / `BREAKING CHANGE`); they drive the SemVer bump and `CHANGELOG.md`.
 - Never edit `version` in `package.json` by hand.
 - Release from `main` with the scripts: `npm run release:dry` to preview, then `npm run release` (`release:first` for the first release).
+- CI (`.github/workflows/ci.yml`) runs typecheck, tests and build on Ubuntu, macOS and Windows with Node 20 and 24; keep tests platform-independent (mock `process.platform`, don't hardcode `/` paths).
 - Publishing to npm happens via the tag-triggered workflow `.github/workflows/publish.yml` when a `v*` tag is pushed; don't run `npm publish` manually.
 
 ## Project Layout
@@ -53,8 +54,8 @@ src/
   plugins.ts              Plugin discovery + apiVersion check, enabled/disabled state, config files (0600)
   pluginHost.ts           PluginHost: plugin lifecycle (init/exit/config change), emit()
   plugins/
-    sound.ts              Built-in: system sound on phase start (macOS)
-    desktop-notify.ts     Built-in: desktop notification on phase end
+    sound.ts              Built-in: system sound on phase start (macOS, Windows)
+    desktop-notify.ts     Built-in: desktop notification on phase end (macOS, Linux, Windows)
     session-log.ts        Built-in: focus session history (history.jsonl) + /history and /stats commands
   ui/
     hooks/

@@ -116,6 +116,13 @@ describe('recording', () => {
     ]);
   });
 
+  it('expands a leading ~\\ (Windows style) under the home folder', async () => {
+    await plugin.onPhaseEnd!(phaseCtx('work', {}, { file: '~\\win-history.jsonl' }));
+    const file = path.join(HOME, 'win-history.jsonl');
+    expect(readLog(file)).toHaveLength(1);
+    fs.rmSync(file);
+  });
+
   it('expands a leading ~ in a custom file and creates missing folders', async () => {
     const cfg = { file: '~/nested/deeper/log.jsonl' };
     await plugin.onPhaseEnd!(phaseCtx('work', {}, cfg));

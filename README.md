@@ -13,7 +13,7 @@ npm install -g @palagdan/pomodoro-cli
 pomodoro
 ```
 
-Requires Node.js 20+.
+Requires Node.js 20+. Supported on macOS, Linux and Windows.
 
 ## Usage
 
@@ -48,9 +48,9 @@ Settings are saved to `~/.pomodoro-cli/settings.json`.
 
 Built-in plugins:
 
-- `sound` - plays a macOS system sound when a phase starts (sounds are configurable).
-- `desktop-notify` - shows a desktop notification when a phase ends (macOS and Linux).
-- `session-log` - records finished focus sessions (and focus sessions skipped after they had started) and adds the `/history` and `/stats` commands. Records are appended to `~/.pomodoro-cli/history.jsonl` (configurable via `file`; enable `logBreaks` to log breaks too) as JSON Lines, one object per line: `at` (ISO timestamp), `phase`, `outcome` (`completed` or `skipped`), `focusedSeconds`, `durationSeconds`, `sessions`. Easy to analyse with `jq` or a script.
+- `sound` - plays a system sound when a phase starts (macOS and Windows; sounds are configurable).
+- `desktop-notify` - shows a desktop notification when a phase ends (macOS, Linux and Windows).
+- `session-log` - records finished focus sessions (and focus sessions skipped after they had started) and adds the `/history` and `/stats` commands. Records are appended to `~/.pomodoro-cli/history.jsonl` (configurable via `file`, where `~/` or `~\` means your home folder; enable `logBreaks` to log breaks too) as JSON Lines, one object per line: `at` (ISO timestamp), `phase`, `outcome` (`completed` or `skipped`), `focusedSeconds`, `durationSeconds`, `sessions`. Easy to analyse with `jq` or a script.
 
 Enable or disable plugins in `/plugins`.
 

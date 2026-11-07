@@ -33,7 +33,7 @@ const HISTORY_LIMIT = 20;
 function resolveFile(config: ConfigValues): string {
   const file = String(config.file || '~/.pomodoro-cli/history.jsonl');
   if (file === '~') return os.homedir();
-  if (file.startsWith('~/')) return path.join(os.homedir(), file.slice(2));
+  if (/^~[\\/]/.test(file)) return path.join(os.homedir(), file.slice(2));
   return file;
 }
 

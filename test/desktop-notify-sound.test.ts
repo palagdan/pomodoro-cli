@@ -52,7 +52,31 @@ describe('sound plugin', () => {
     }
   });
 
-  it.each(['linux', 'win32'])('does nothing on %s', platform => {
+  it('plays the mapped WAV from SystemRoot\\Media on win32', () => {
+    setPlatform('win32');
+    const original = process.env.SystemRoot;
+    process.env.SystemRoot = 'D:\\Win';
+    try {
+      sound.onPhaseChange!(ctx(sound, 'work'));
+    } finally {
+      if (original === undefined) delete process.env.SystemRoot;
+      else process.env.SystemRoot = original;
+    }
+    const [cmd, args, opts] = vi.mocked(execFile).mock.calls[0] as unknown as [string, string[], any];
+    expect(cmd).toBe('powershell.exe');
+    expect(args.at(-1)).toContain('$env:POMODORO_SOUND');
+    expect(opts.windowsHide).toBe(true);
+    expect(opts.env.POMODORO_SOUND).toBe('D:\\Win\\Media\\Windows Notify Calendar.wav');
+  });
+
+  it('does nothing on win32 for an unknown sound name', () => {
+    setPlatform('win32');
+    // Bypass resolveConfig, which would fall back to the default for an invalid option.
+    sound.onPhaseChange!({ ...ctx(sound, 'work'), config: { workSound: 'Nope' } });
+    expect(execFile).not.toHaveBeenCalled();
+  });
+
+  it.each(['linux', 'freebsd'])('does nothing on %s', platform => {
     setPlatform(platform);
     sound.onPhaseChange!(ctx(sound, 'work'));
     expect(execFile).not.toHaveBeenCalled();
@@ -99,8 +123,23 @@ describe('desktop-notify plugin', () => {
     ]);
   });
 
-  it('does nothing on other platforms', () => {
+  it('shows a toast via powershell.exe on win32 with title/body in env', () => {
     setPlatform('win32');
+    desktopNotify.onPhaseEnd!(ctx(desktopNotify, 'work', 2));
+    const [cmd, args, opts] = vi.mocked(execFile).mock.calls[0] as unknown as [string, string[], any];
+    expect(cmd).toBe('powershell.exe');
+    expect(args.slice(0, 3)).toEqual(['-NoProfile', '-NonInteractive', '-Command']);
+    expect(opts.windowsHide).toBe(true);
+    expect(opts.env.POMODORO_TITLE).toBe('Focus session complete!');
+    expect(opts.env.POMODORO_BODY).toBe('Time for a break. (2 sessions done)');
+    expect(args[3]).toContain('$env:POMODORO_TITLE');
+    expect(args[3]).not.toContain('Focus session complete!');
+    expect(args[3]).not.toContain('Time for a break');
+    expect(args[3]).toContain("{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe");
+  });
+
+  it('does nothing on other platforms', () => {
+    setPlatform('freebsd');
     desktopNotify.onPhaseEnd!(ctx(desktopNotify, 'work', 1));
     expect(execFile).not.toHaveBeenCalled();
   });
