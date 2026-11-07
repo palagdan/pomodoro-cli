@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.1.0](https://github.com/palagdan/pomodoro-cli/compare/v1.0.1...v1.1.0) (2026-11-07)
+
+### Features
+
+* support Windows in built-in plugins and CI ([24b37eb](https://github.com/palagdan/pomodoro-cli/commit/24b37eb805bf8d6663d4b6cd6405a92aae18c331))
+
+### Documentation
+
+* add demo GIF recorded with VHS ([0bf4dd0](https://github.com/palagdan/pomodoro-cli/commit/0bf4dd05cccb41c6a37fe92315c8d5560922d179))
+* add Windows install guide ([596d031](https://github.com/palagdan/pomodoro-cli/commit/596d0317c5613e66c8f586f393ce5a771dc887c5))
+
 ## [1.0.1](https://github.com/palagdan/pomodoro-cli/compare/v1.0.0...v1.0.1) (2026-11-07)
 
 ## 1.0.0 (2026-11-06)
