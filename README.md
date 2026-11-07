@@ -17,6 +17,50 @@ pomodoro
 
 Requires Node.js 22.12+. Supported on macOS, Linux and Windows.
 
+### Windows
+
+Windows support for the desktop-notify and sound plugins requires version 1.1.0 or later.
+
+1. Download the **LTS** Windows installer (`.msi`, version 22.12 or later) from [nodejs.org](https://nodejs.org/en/download) and run it. Keep the default options; they add Node.js and npm to your PATH.
+
+   Open a **new** terminal and check the version:
+
+   ```powershell
+   node -v
+   ```
+
+2. Install and run:
+
+   ```powershell
+   npm install -g @palagdan/pomodoro-cli
+   pomodoro
+   ```
+
+   npm puts `pomodoro.cmd` and `pomodoro.ps1` shims in `%APPDATA%\npm`, which the Node installer adds to PATH.
+
+3. Use [Windows Terminal](https://aka.ms/terminal) (the default on Windows 11; on Windows 10 run `winget install Microsoft.WindowsTerminal`). The legacy console host can render the borders, tomato art and colours incorrectly.
+
+Settings, plugins and history live in `%USERPROFILE%\.pomodoro-cli` (the `~/.pomodoro-cli` mentioned below).
+
+Troubleshooting:
+
+- `pomodoro : File ...\pomodoro.ps1 cannot be loaded because running scripts is disabled on this system`: run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, or run `pomodoro.cmd` instead, or use cmd.exe.
+- `'pomodoro' is not recognized`: open a new terminal. If it is still missing, run `npm prefix -g` and make sure that folder is on PATH.
+- No notifications: toasts are sent via Windows PowerShell and show "Windows PowerShell" as the sender. Check Settings → System → Notifications, and that Do Not Disturb / Focus is off.
+- No sound: sounds use the WAV files in `C:\Windows\Media`.
+
+To uninstall:
+
+```powershell
+npm uninstall -g @palagdan/pomodoro-cli
+```
+
+Optionally delete `%USERPROFILE%\.pomodoro-cli`.
+
+### macOS / Linux
+
+If `npm install -g` fails with `EACCES`, use a Node version manager (fnm, nvm) instead of `sudo`.
+
 ## Usage
 
 The menu is driven by slash commands:
