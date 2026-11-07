@@ -1,5 +1,5 @@
 {
-  "name": "pomodoro-cli",
+  "name": "@palagdan/pomodoro-cli",
   "version": "1.0.0",
   "type": "module",
   "bin": {

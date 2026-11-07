@@ -7,13 +7,11 @@ The interface is inspired by AI coding harnesses such as Claude Code and OpenAI'
 ## Install
 
 ```bash
-npm install -g @your-scope/pomodoro-cli
+npm install -g @palagdan/pomodoro-cli
 pomodoro
 ```
 
 Requires Node.js 20+.
-
-> The package name is not final yet: the unscoped name `pomodoro-cli` is already taken on npm, so replace `@your-scope` with the actual scope once published.
 
 ## Usage
 
@@ -71,7 +69,7 @@ import { join } from 'node:path';
 
 const LOG = join(homedir(), '.pomodoro-cli', 'hello.log');
 
-/** @type {import('@your-scope/pomodoro-cli/plugin').PomodoroPlugin} */
+/** @type {import('@palagdan/pomodoro-cli/plugin').PomodoroPlugin} */
 export default {
   name: 'hello',
   apiVersion: 1,
@@ -89,10 +87,10 @@ export default {
 
 Do not use `console.log` in hooks: the terminal is owned by the UI and output would corrupt it. Errors thrown (or rejected) by a hook are caught and reported, and never crash the timer.
 
-If you install the package next to your plugins (`cd ~/.pomodoro-cli/plugins && npm i -D @your-scope/pomodoro-cli`), you get types and the `definePlugin` helper:
+If you install the package next to your plugins (`cd ~/.pomodoro-cli/plugins && npm i -D @palagdan/pomodoro-cli`), you get types and the `definePlugin` helper:
 
 ```js
-import { definePlugin } from '@your-scope/pomodoro-cli/plugin';
+import { definePlugin } from '@palagdan/pomodoro-cli/plugin';
 
 export default definePlugin({ name: 'hello', apiVersion: 1, onPhaseEnd(ctx) { /* ... */ } });
 ```
