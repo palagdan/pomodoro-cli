@@ -13,7 +13,7 @@ npm install -g @palagdan/pomodoro-cli
 pomodoro
 ```
 
-Requires Node.js 20+. Supported on macOS, Linux and Windows.
+Requires Node.js 22.12+. Supported on macOS, Linux and Windows.
 
 ## Usage
 

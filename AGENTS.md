@@ -4,7 +4,7 @@
 
 | Layer | Technology |
 |---|---|
-| Runtime | Node.js 20+ (ESM, `"type": "module"`) |
+| Runtime | Node.js 22.12+ (ESM, `"type": "module"`) |
 | Language | TypeScript 5 |
 | UI framework | Ink 6 (React for CLIs) |
 | JSX runner | tsx (zero-config TS/JSX, no Babel) |
@@ -36,7 +36,7 @@ npm run build          # compile to dist/ via tsconfig.build.json
 - Commit messages must follow Conventional Commits (`feat:`, `fix:`, `feat!:` / `BREAKING CHANGE`); they drive the SemVer bump and `CHANGELOG.md`.
 - Never edit `version` in `package.json` by hand.
 - Release from `main` with the scripts: `npm run release:dry` to preview, then `npm run release` (`release:first` for the first release).
-- CI (`.github/workflows/ci.yml`) runs typecheck, tests and build on Ubuntu, macOS and Windows with Node 20 and 24; keep tests platform-independent (mock `process.platform`, don't hardcode `/` paths).
+- CI (`.github/workflows/ci.yml`) runs typecheck, tests and build on Ubuntu, macOS and Windows with Node 22 and 24; keep tests platform-independent (mock `process.platform`, don't hardcode `/` paths).
 - Publishing to npm happens via the tag-triggered workflow `.github/workflows/publish.yml` when a `v*` tag is pushed; don't run `npm publish` manually.
 
 ## Project Layout

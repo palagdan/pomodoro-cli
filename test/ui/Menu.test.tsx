@@ -3,8 +3,8 @@ import { render } from 'ink-testing-library';
 import { describe, expect, it, vi } from 'vitest';
 import Menu from '../../src/ui/screens/Menu.js';
 import { DEFAULT_SETTINGS } from '../../src/constants.js';
+import { tick } from '../helpers/ui.js';
 
-const tick = () => new Promise(r => setTimeout(r, 20));
 
 function setup() {
   const props = {
@@ -16,8 +16,11 @@ function setup() {
     ],
   };
   const r = render(<Menu {...props} />);
-  const press = async (s: string) => { r.stdin.write(s); await tick(); };
-  return { ...r, props, press };
+  // Let effects (input handlers) re-subscribe after the previous render before sending the next key
+  const press = async (s: string) => { await tick(); r.stdin.write(s); await tick(); };
+  const frame = () => r.lastFrame() ?? '';
+  const see = (text: string) => vi.waitFor(() => expect(frame()).toContain(text));
+  return { ...r, props, press, see };
 }
 
 describe('Menu', () => {
@@ -26,41 +29,55 @@ describe('Menu', () => {
     await tick();
     expect(m.lastFrame()).not.toContain('tab complete');
     await m.press('/');
-    const f = m.lastFrame()!;
-    // Descriptions are unique to the palette (the dashboard also lists some /names)
-    const order = ['Start the Pomodoro timer', 'Configure timer durations', 'Manage plugins', 'Show history', 'Show stats', 'Exit the app'].map(c => f.indexOf(c));
-    expect(order.every(i => i >= 0)).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    await m.see('tab complete');
+    await vi.waitFor(() => {
+      const f = m.lastFrame()!;
+      // Descriptions are unique to the palette (the dashboard also lists some /names)
+      const order = ['Start the Pomodoro timer', 'Configure timer durations', 'Manage plugins', 'Show history', 'Show stats', 'Exit the app'].map(c => f.indexOf(c));
+      expect(order.every(i => i >= 0)).toBe(true);
+      expect([...order].sort((a, b) => a - b)).toEqual(order);
+    });
     m.unmount();
   });
 
   it('filters by prefix', async () => {
     const m = setup();
     await m.press('/');
+    await m.see('tab complete');
     await m.press('s');
-    const f = m.lastFrame()!;
-    expect(f).toContain('Start the Pomodoro timer');
-    expect(f).toContain('Configure timer durations');
-    expect(f).toContain('Show stats');
-    expect(f).not.toContain('Manage plugins');
-    expect(f).not.toContain('Exit the app');
+    // The unfiltered palette listed these, so their absence proves the new frame rendered
+    await vi.waitFor(() => {
+      const f = m.lastFrame()!;
+      expect(f).toContain('Start the Pomodoro timer');
+      expect(f).toContain('Configure timer durations');
+      expect(f).toContain('Show stats');
+      expect(f).not.toContain('Manage plugins');
+      expect(f).not.toContain('Exit the app');
+    });
     await m.press('t');
-    expect(m.lastFrame()).not.toContain('Configure timer durations');
+    await vi.waitFor(() => {
+      expect(m.lastFrame()).toContain('Start the Pomodoro timer');
+      expect(m.lastFrame()).not.toContain('Configure timer durations');
+    });
     m.unmount();
   });
 
   it('shows a message when nothing matches', async () => {
     const m = setup();
     await m.press('/');
+    await m.see('tab complete');
     await m.press('z');
-    expect(m.lastFrame()).toContain('No matching commands');
+    await m.see('No matching commands');
     m.unmount();
   });
 
   it('Enter runs the first match exactly once', async () => {
     const m = setup();
     await m.press('/');
+    await m.see('tab complete');
     await m.press('\r');
+    await vi.waitFor(() => expect(m.props.onStart).toHaveBeenCalledTimes(1));
+    await tick(); await tick();
     expect(m.props.onStart).toHaveBeenCalledTimes(1);
     m.unmount();
   });
@@ -68,14 +85,22 @@ describe('Menu', () => {
   it('arrows move the highlight and Enter runs that command exactly once', async () => {
     const m = setup();
     await m.press('/');
+    await m.see('tab complete');
     await m.press('\x1b[B');
+    await m.see('▶ /settings');
     await m.press('\r');
+    await vi.waitFor(() => expect(m.props.onSettings).toHaveBeenCalledTimes(1));
+    await tick(); await tick();
     expect(m.props.onSettings).toHaveBeenCalledTimes(1);
     expect(m.props.onStart).not.toHaveBeenCalled();
 
     await m.press('\x1b[B');
+    await m.see('▶ /plugins');
     await m.press('\x1b[A');
+    await m.see('▶ /settings');
     await m.press('\r');
+    await vi.waitFor(() => expect(m.props.onSettings).toHaveBeenCalledTimes(2));
+    await tick(); await tick();
     expect(m.props.onSettings).toHaveBeenCalledTimes(2);
     m.unmount();
   });
@@ -83,11 +108,16 @@ describe('Menu', () => {
   it('Tab completes the highlighted command', async () => {
     const m = setup();
     await m.press('/');
+    await m.see('tab complete');
     await m.press('\x1b[B');
+    await m.see('▶ /settings');
     await m.press('\x1b[B');
+    await m.see('▶ /plugins');
     await m.press('\t');
-    expect(m.lastFrame()).toContain('/plugins');
+    await m.see('❯ /plugins');
     await m.press('\r');
+    await vi.waitFor(() => expect(m.props.onPlugins).toHaveBeenCalledTimes(1));
+    await tick(); await tick();
     expect(m.props.onPlugins).toHaveBeenCalledTimes(1);
     m.unmount();
   });
@@ -95,24 +125,30 @@ describe('Menu', () => {
   it('Tab on a typed prefix completes to the full name', async () => {
     const m = setup();
     await m.press('/');
+    await m.see('tab complete');
     await m.press('h');
+    await m.see('❯ /h');
     await m.press('\t');
+    await m.see('❯ /history');
     await m.press('\r');
-    expect(m.props.onPluginCommand).toHaveBeenCalledWith('history');
+    await vi.waitFor(() => expect(m.props.onPluginCommand).toHaveBeenCalledWith('history'));
     m.unmount();
   });
 
   it('plugin commands call onPluginCommand with the bare name', async () => {
     const m = setup();
     await m.press('/');
-    await m.press('s');
-    await m.press('t');
-    await m.press('a');
-    await m.press('t');
-    await m.press('s');
+    await m.see('tab complete');
+    let typed = '/';
+    for (const ch of 'stats') {
+      typed += ch;
+      await m.press(ch);
+      await m.see(`❯ ${typed}`);
+    }
     await m.press('\r');
+    await vi.waitFor(() => expect(m.props.onPluginCommand).toHaveBeenCalledWith('stats'));
+    await tick(); await tick();
     expect(m.props.onPluginCommand).toHaveBeenCalledTimes(1);
-    expect(m.props.onPluginCommand).toHaveBeenCalledWith('stats');
     m.unmount();
   });
 });

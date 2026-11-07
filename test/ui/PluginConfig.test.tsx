@@ -3,8 +3,8 @@ import { render } from 'ink-testing-library';
 import { describe, expect, it, vi } from 'vitest';
 import PluginConfig from '../../src/ui/screens/PluginConfig.js';
 import type { PomodoroPlugin } from '../../src/types.js';
+import { tick } from '../helpers/ui.js';
 
-const tick = () => new Promise(r => setTimeout(r, 20));
 const DOWN = '\x1b[B', RIGHT = '\x1b[C', LEFT = '\x1b[D';
 
 const plugin: PomodoroPlugin = {
@@ -22,9 +22,31 @@ const plugin: PomodoroPlugin = {
 function setup(values = {}) {
   const onSave = vi.fn(), onExit = vi.fn();
   const r = render(<PluginConfig plugin={plugin} values={values} onSave={onSave} onExit={onExit} />);
-  const press = async (s: string) => { r.stdin.write(s); await tick(); };
-  const down = async (n: number) => { for (let i = 0; i < n; i++) await press(DOWN); };
-  return { ...r, onSave, onExit, press, down };
+  // Let effects (input handlers) re-subscribe after the previous render before sending the next key
+  const press = async (s: string) => { await tick(); r.stdin.write(s); await tick(); };
+  const see = (m: string | RegExp) => vi.waitFor(() => {
+    if (typeof m === 'string') expect(r.lastFrame()).toContain(m);
+    else expect(r.lastFrame()).toMatch(m);
+  });
+  // Moves the cursor down one field at a time, waiting for the highlight to land on each
+  let row = 0;
+  const down = async (n: number) => {
+    for (let i = 0; i < n; i++) {
+      await press(DOWN);
+      row++;
+      await see(`▶ ${plugin.config![row]!.label}`);
+    }
+  };
+  // Types text into the active edit field, waiting for each character to render
+  const type = async (text: string, mask = false) => {
+    let typed = '';
+    for (const ch of text) {
+      typed += ch;
+      await press(ch);
+      await see(mask ? '•'.repeat(typed.length) : typed);
+    }
+  };
+  return { ...r, onSave, onExit, press, down, see, type };
 }
 
 describe('PluginConfig', () => {
@@ -32,7 +54,7 @@ describe('PluginConfig', () => {
     const c = setup();
     await tick();
     await c.press('s');
-    expect(c.lastFrame()).toContain('Required: Token');
+    await c.see('Required: Token');
     expect(c.onSave).not.toHaveBeenCalled();
     c.unmount();
   });
@@ -41,10 +63,12 @@ describe('PluginConfig', () => {
     const c = setup();
     await c.down(1);
     await c.press('\r');
-    for (const ch of 'hunter2') await c.press(ch);
+    await c.see('❯');
+    await c.type('hunter2', true);
     expect(c.lastFrame()).not.toContain('hunter2');
-    expect(c.lastFrame()).toContain('•••••••');
     await c.press('\r');
+    // The edit prompt disappears once the field is committed
+    await vi.waitFor(() => expect(c.lastFrame()).not.toContain('❯'));
     expect(c.lastFrame()).not.toContain('hunter2');
     expect(c.lastFrame()).toContain('•••••••');
     c.unmount();
@@ -53,57 +77,73 @@ describe('PluginConfig', () => {
   it('adjusts numbers with arrows and clamps to min/max', async () => {
     const c = setup();
     await c.down(2);
-    expect(c.lastFrame()).toContain('5');
+    await c.see(/◀ 5 ▶/);
     await c.press(RIGHT);
-    expect(c.lastFrame()).toMatch(/◀ 7 ▶/);
+    await c.see(/◀ 7 ▶/);
+    // Clamped at max: the value can't change, so give the UI a chance to (wrongly) move
     await c.press(RIGHT);
-    expect(c.lastFrame()).toMatch(/◀ 7 ▶/);
-    for (let i = 0; i < 5; i++) await c.press(LEFT);
-    expect(c.lastFrame()).toMatch(/◀ 0 ▶/);
+    await tick();
+    await c.see(/◀ 7 ▶/);
+    for (const v of [5, 3, 1, 0]) {
+      await c.press(LEFT);
+      await c.see(new RegExp(`◀ ${v} ▶`));
+    }
+    await c.press(LEFT);
+    await tick();
+    await c.see(/◀ 0 ▶/);
     c.unmount();
   });
 
   it('cycles a select and wraps in both directions', async () => {
     const c = setup();
     await c.down(4);
-    expect(c.lastFrame()).toMatch(/◀ a ▶/);
-    await c.press(RIGHT); await c.press(RIGHT);
-    expect(c.lastFrame()).toMatch(/◀ c ▶/);
+    await c.see(/◀ a ▶/);
     await c.press(RIGHT);
-    expect(c.lastFrame()).toMatch(/◀ a ▶/);
+    await c.see(/◀ b ▶/);
+    await c.press(RIGHT);
+    await c.see(/◀ c ▶/);
+    await c.press(RIGHT);
+    await c.see(/◀ a ▶/);
     await c.press(LEFT);
-    expect(c.lastFrame()).toMatch(/◀ c ▶/);
+    await c.see(/◀ c ▶/);
     c.unmount();
   });
 
   it('toggles a boolean with space', async () => {
     const c = setup();
     await c.down(3);
-    expect(c.lastFrame()).toContain('[ ]');
+    await c.see('[ ]');
     await c.press(' ');
-    expect(c.lastFrame()).toContain('[x]');
+    await c.see('[x]');
     await c.press(' ');
-    expect(c.lastFrame()).toContain('[ ]');
+    await c.see('[ ]');
     c.unmount();
   });
 
   it('saves the full typed config', async () => {
     const c = setup();
     await c.press('\r');
-    for (const ch of 'Bob') await c.press(ch);
+    await c.see('❯');
+    await c.type('Bob');
     await c.press('\r');
+    await vi.waitFor(() => expect(c.lastFrame()).not.toContain('❯'));
     await c.down(1);
     await c.press('\r');
-    for (const ch of 'sekret') await c.press(ch);
+    await c.see('❯');
+    await c.type('sekret', true);
     await c.press('\r');
+    await vi.waitFor(() => expect(c.lastFrame()).not.toContain('❯'));
     await c.down(1);
     await c.press(RIGHT);
+    await c.see(/◀ 7 ▶/);
     await c.down(1);
     await c.press(' ');
+    await c.see('[x]');
     await c.down(1);
     await c.press(RIGHT);
+    await c.see(/◀ b ▶/);
     await c.press('s');
-    expect(c.onSave).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(c.onSave).toHaveBeenCalledTimes(1));
     expect(c.onSave).toHaveBeenCalledWith({ name: 'Bob', token: 'sekret', volume: 7, loud: true, mode: 'b' });
     c.unmount();
   });
@@ -111,6 +151,8 @@ describe('PluginConfig', () => {
   it('q calls onExit without saving', async () => {
     const c = setup();
     await c.press('q');
+    await vi.waitFor(() => expect(c.onExit).toHaveBeenCalledTimes(1));
+    await tick(); await tick();
     expect(c.onExit).toHaveBeenCalledTimes(1);
     expect(c.onSave).not.toHaveBeenCalled();
     c.unmount();
