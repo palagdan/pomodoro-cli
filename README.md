@@ -2,6 +2,8 @@
 
 [![npm](https://img.shields.io/npm/v/@palagdan/pomodoro-cli)](https://www.npmjs.com/package/@palagdan/pomodoro-cli)
 
+![pomodoro demo](docs/demo.gif)
+
 A minimalist Pomodoro timer for people who live in the terminal.
 
 The interface is inspired by AI coding harnesses such as Claude Code and OpenAI's Codex CLI: one prompt, slash commands with a filterable palette, and clean bordered panels. No mouse, no clutter, just focus. Built with [Ink](https://github.com/vadimdemedes/ink).

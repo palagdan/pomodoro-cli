@@ -30,7 +30,8 @@
     "release": "commit-and-tag-version",
     "release:dry": "commit-and-tag-version --dry-run",
     "release:first": "commit-and-tag-version --first-release",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "demo": "npm run build && vhs demo/demo.tape"
   },
   "keywords": [
     "pomodoro",
