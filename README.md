@@ -1,5 +1,7 @@
 # pomodoro-cli
 
+[![npm](https://img.shields.io/npm/v/@palagdan/pomodoro-cli)](https://www.npmjs.com/package/@palagdan/pomodoro-cli)
+
 A minimalist Pomodoro timer for people who live in the terminal.
 
 The interface is inspired by AI coding harnesses such as Claude Code and OpenAI's Codex CLI: one prompt, slash commands with a filterable palette, and clean bordered panels. No mouse, no clutter, just focus. Built with [Ink](https://github.com/vadimdemedes/ink).
@@ -198,6 +200,15 @@ npm run release              # first ever release: npm run release:first
 git push --follow-tags
 npm publish                  # scoped packages: npm publish --access public
 ```
+
+Releases are published to npm by GitHub Actions (`.github/workflows/publish.yml`) when a `v*` tag is pushed, so the manual `npm publish` step is normally not needed:
+
+```bash
+npm run release        # bump version, update CHANGELOG, create tag
+git push --follow-tags # triggers the publish workflow
+```
+
+The workflow uses npm trusted publishing, so no npm token is stored in the repo.
 
 ## License
 

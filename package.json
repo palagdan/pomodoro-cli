@@ -43,6 +43,14 @@
   "author": "",
   "license": "ISC",
   "description": "Terminal Pomodoro timer built with Ink",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/palagdan/pomodoro-cli.git"
+  },
+  "homepage": "https://github.com/palagdan/pomodoro-cli#readme",
+  "bugs": {
+    "url": "https://github.com/palagdan/pomodoro-cli/issues"
+  },
   "dependencies": {
     "ink": "^6.8.0",
     "ink-text-input": "^6.0.0",

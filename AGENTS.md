@@ -36,6 +36,7 @@ npm run build          # compile to dist/ via tsconfig.build.json
 - Commit messages must follow Conventional Commits (`feat:`, `fix:`, `feat!:` / `BREAKING CHANGE`); they drive the SemVer bump and `CHANGELOG.md`.
 - Never edit `version` in `package.json` by hand.
 - Release from `main` with the scripts: `npm run release:dry` to preview, then `npm run release` (`release:first` for the first release).
+- Publishing to npm happens via the tag-triggered workflow `.github/workflows/publish.yml` when a `v*` tag is pushed; don't run `npm publish` manually.
 
 ## Project Layout
 
